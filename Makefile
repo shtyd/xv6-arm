@@ -34,8 +34,6 @@ TOOLPREFIX = arm-none-eabi-
 # Using native tools (e.g., on X86 Linux)
 #TOOLPREFIX = 
 
-
-
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
 TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/dev/null 2>&1; \
