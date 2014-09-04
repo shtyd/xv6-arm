@@ -1,4 +1,6 @@
 OBJS = \
+	main.o\
+
 #	bio.o\
 #	console.o\
 #	exec.o\
@@ -33,8 +35,6 @@ TOOLPREFIX = arm-none-eabi-
 
 # Using native tools (e.g., on X86 Linux)
 #TOOLPREFIX = 
-
-
 
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
@@ -76,10 +76,10 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -Werror -fno-omit-frame-pointer
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -Werror -fno-omit-frame-pointer -mcpu=arm1176jzf-s -g
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 #ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
-ASFLAGS = -gdwarf-2
+ASFLAGS = -gdwarf-2 -mcpu=arm1176jzf-s -g
 # FreeBSD ld wants ``elf_i386_fbsd''
 #LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 LDFLAGS += -m $(shell $(LD) -V | grep armelf 2>/dev/null)

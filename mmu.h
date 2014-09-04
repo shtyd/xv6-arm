@@ -118,7 +118,8 @@ struct segdesc {
 #define PGADDR(d, t, o) ((uint)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
 
 // Page directory and page table constants.
-#define NPDENTRIES      1024    // # directory entries per page directory
+#define NPDENTRIES      4096    // # directory entries per page directory
+#define NTTENTRIES      4096    // number of entries per Translation table(ARM)
 #define NPTENTRIES      1024    // # PTEs per page table
 #define PGSIZE          4096    // bytes mapped by a page
 
@@ -140,6 +141,19 @@ struct segdesc {
 #define PTE_PS          0x080   // Page Size
 #define PTE_MBZ         0x180   // Bits must be zero
 
+#define P               0x0     // ARM1176JZF-S does not support the P bit.
+#define DOMAIN          0xF     // A permission fault can not be generated.
+#define SBZ             0x0     // Should Be Zero.
+#define NS              0x0     // Non-Secure access. TCM not visible, go to level 2 memory.
+#define XN              0x1     // Execution Never: The region is Not-executable.
+#define B               0x0     // Bufferable: no
+#define C               0x0     // Cacheable: no
+#define TEX             0x001     // Type Extension Field:  (with B and C bit)
+#define S               0x0     // System Protection
+#define R               0x0     // ROM Protection
+#define AP              0x2     // Access Permission: supervisor:R/W, user:R (with S and R bit)
+#define APX             0x0     // Access Permission Extension
+#define nG              0x0     // Not Global
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)   ((uint)(pte) & ~0xFFF)
 #define PTE_FLAGS(pte)  ((uint)(pte) &  0xFFF)
