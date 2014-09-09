@@ -5,23 +5,17 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "uart.h"
 
 
-volatile unsigned int * const UART0DR = (unsigned int *)0x101f1000;
-//emulator: UART0::0x101f1000;                                                                      
-
-/* void print_uart0(const char *s) { */
-/* 	while(*s != '\0') { /\* Loop until end of string *\/ */
-/* 		*UART0DR = (unsigned int)(*s); /\* Transmit char *\/ */
-/* 		s++; /\* Next char *\/ */
-/* 	} */
-/* } */
+volatile unsigned int * const UART0 = (unsigned int *)UART0ADDR;
+extern void uart_init();
 
 int main(void){
-//	print_uart0("Hello main!\n");
-	*UART0DR = (unsigned int)0x44;
+	//uart_init(); おそらく不要
+ 	*UART0 = (unsigned int)0x44;
+
 	while(1){}
-	
 	return 0;
 }
 /* static void startothers(void); */
@@ -82,8 +76,6 @@ int main(void){
 
 
 
-//pde_t entrypgdir[];  // For entry.S
-
 
 
 /* // Start the non-boot (AP) processors. */
@@ -123,38 +115,12 @@ int main(void){
 
 
 
-// Boot page table used in entry.S and entryother.S.
-// Page directories (and page tables), must start on a page boundary,
-// hence the "__aligned__" attribute.  
-// Use PTE_PS in page directory entry to enable 4Mbyte pages.
-/* __attribute__((__aligned__(PGSIZE)))                      //PGSIZE 4096 */
-/* pde_t entrypgdir[NPDENTRIES] = {                          //NPDENTRIES 1024 */
-/*   // Map VA's [0, 4MB) to PA's [0, 4MB) */
-/*   [0] = (0) | PTE_P | PTE_W | PTE_PS,  */
-/*   // Map VA's [KERNBASE, KERNBASE+4MB) to PA's [0, 4MB) */
-/*   [KERNBASE>>PDXSHIFT] = (0) | PTE_P | PTE_W | PTE_PS,    //KERNBASE 80000000, PDXSHIFT 22 */
-/* }; */
-
-
-/*entryのためのページディレクトリ*/
-// Boot page table used in entry.S and entryother.S.
-// Page directories (and page tables), must start on a page boundary,
-// hence the "__aligned__" attribute.  
-// (p.6-39)
-
-//1M sectionを使う ?
-/* __attribute__((__aligned__(1024 * 16)))                             //PGSIZE 4096 */
-/* pde_t entrypgdir[NTTENTRIES] = {                                    //Number of Translation table entries : 4096 */
-/* 	[0] = 0b000000000000 << 20 | 0b00000001010000000010, */
-/* 	[0x10100000 >> 20] = 0x10100000 | 0b00000001010000000010,    //UART0: 0x101f1000 */
-/* 	[KERNBASE >> 20] = 0b000000000000 << 20 | 0b00000001010000000010, */
-/* }; */
-
+/*entryのための(page)section table*/
 //1M sectionを使う(=>1-levelの変換)
 //TTBRレジスタは下位14bitが0として参照されるので
 //1-level Page Tableの先頭アドレスは16KB境界に整列する必要がある.
 __attribute__((__aligned__(1024 * 16)))                           
-pde_t EntryPageTable[NTTENTRIES] = {                 //Number of Translation table entries : 4096
+pde_t EntryPageTable[NTTENTRIES] = {         //Number of Translation table entries : 4096
 	//0
 	[0x000] = 0 | (0x000 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
@@ -165,35 +131,26 @@ pde_t EntryPageTable[NTTENTRIES] = {                 //Number of Translation tab
 	[0x002] = 0 | (0x002 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	[0x003] = 0 | (0x003 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
-	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
-	
-	[0x004] = 0 | (0x004 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+
+        //I/O Peripherals
+	[GPIO_BASE_P >> 20] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-        //UART0: 0x101f1000
-	[0x101] = 0 | (0x101 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[GPIO_BASE_V >> 20] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
+
+	[UART0_BASE_V >> 20] = 0 | ((UART0_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
+
 
 	//KERNBASE
-	[0x800] = 0 | (0x000 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[0xc00] = 0 | (0x000 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	//KERNBASE + 1M
-	[0x801] = 0 | (0x001 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[0xc01] = 0 | (0x001 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	[0x801] = 0 | (0x002 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[0xc02] = 0 | (0x002 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	[0x801] = 0 | (0x003 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
-	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
-
-	[0x801] = 0 | (0x004 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
-	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2
 };
-
- 
-//PAGEBREAK!
-// Blank page.
-

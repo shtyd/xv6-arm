@@ -1,77 +1,94 @@
-// Intel 8250 serial port (UART).
+//uart initialization (for REAL) and communication
 
 #include "types.h"
-#include "defs.h"
-#include "param.h"
-#include "traps.h"
-#include "spinlock.h"
-#include "fs.h"
-#include "file.h"
 #include "mmu.h"
-#include "proc.h"
-#include "x86.h"
+#include "memlayout.h"
+#include "uart.h"
 
-#define COM1    0x3f8
+extern inline void mmio_write(unsigned int reg, unsigned int data);
+extern inline unsigned int mmio_read(unsigned int reg);
 
-static int uart;    // is there a uart?
-
-void
-uartinit(void)
-{
-  char *p;
-
-  // Turn off the FIFO
-  outb(COM1+2, 0);
-  
-  // 9600 baud, 8 data bits, 1 stop bit, parity off.
-  outb(COM1+3, 0x80);    // Unlock divisor
-  outb(COM1+0, 115200/9600);
-  outb(COM1+1, 0);
-  outb(COM1+3, 0x03);    // Lock divisor, 8 data bits.
-  outb(COM1+4, 0);
-  outb(COM1+1, 0x01);    // Enable receive interrupts.
-
-  // If status is 0xFF, no serial port.
-  if(inb(COM1+5) == 0xFF)
-    return;
-  uart = 1;
-
-  // Acknowledge pre-existing interrupt conditions;
-  // enable interrupts.
-  inb(COM1+2);
-  inb(COM1+0);
-  picenable(IRQ_COM1);
-  ioapicenable(IRQ_COM1, 0);
-  
-  // Announce that we're here.
-  for(p="xv6...\n"; *p; p++)
-    uartputc(*p);
+/*
+ * countサイクル待つ
+ * ループを最適化しない
+ * 00000030 <__delay_16>:
+ * 30:   e2533001        subs    r3, r3, #1
+ * 34:   1afffffd        bne     30 <__delay_16>
+ */
+static void delay(int count) {
+	asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n"
+		     : : [count]"r"(count) : "cc");
 }
 
-void
-uartputc(int c)
-{
-  int i;
+void uart_init() {
+	// Disable UART0.
+	mmio_write(UART0_CR, 0x00000000);
 
-  if(!uart)
-    return;
-  for(i = 0; i < 128 && !(inb(COM1+5) & 0x20); i++)
-    microdelay(10);
-  outb(COM1+0, c);
+	// Flash the transmit FIFO
+	mmio_write(UART0_LCRH, 0x00000000);
+
+	// Setup the GPIO pin 14 && 15. 
+	// Disable pull up/down for all GPIO pins & delay for 150 cycles.
+	mmio_write(GPPUD, 0x00000000);
+	delay(150);
+ 
+	// Disable pull up/down for pin 14,15 & delay for 150 cycles.
+	mmio_write(GPPUDCLK0, (1 << 14) | (1 << 15));
+	delay(150);
+
+ 	// Write 0 to GPPUD to make it take effect. ?
+	mmio_write(GPPUD, 0x00000000);
+
+	// Write 0 to GPPUDCLK0 to make it take effect. ?
+	mmio_write(GPPUDCLK0, 0x00000000);
+ 
+	// Clear pending interrupts. ?
+	mmio_write(UART0_ICR, 0xFFFF);
+ 
+	// Set integer & fractional part of baud rate. ?
+	// Divider = UART_CLOCK/(16 * Baud)
+	// Fraction part register = (Fractional part * 64) + 0.5
+	// UART_CLOCK = 3000000; Baud = 115200.
+ 
+	// Divider = 3000000/(16 * 115200) = 1.627 = ~1.
+	// Fractional part register = (.627 * 64) + 0.5 = 40.6 = ~40.
+	mmio_write(UART0_IBRD, 1);
+	mmio_write(UART0_FBRD, 40);
+ 
+	// Enable FIFO & 8 bit data transmissio (1 stop bit, no parity).
+	mmio_write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));
+ 
+	// Mask all interrupts. ?
+	mmio_write(UART0_IMSC, (1 << 1) | (1 << 4) | (1 << 5) |
+		   (1 << 6) | (1 << 7) | (1 << 8) |
+		   (1 << 9) | (1 << 10));
+ 
+	// Enable UART0, receive & transfer part of UART.
+	mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
 }
 
-static int
-uartgetc(void)
-{
-  if(!uart)
-    return -1;
-  if(!(inb(COM1+5) & 0x01))
-    return -1;
-  return inb(COM1+0);
+/*
+ * Transmit a byte via UART0.
+ * uint8_t Byte: byte to send.
+ */
+void uart_putc(char byte) {
+	// wait for UART to become ready to transmit
+	while (1) {
+		if (!(mmio_read(UART0_FR) & (1 << 5))) {
+			break;
+		}
+	}
+	mmio_write(UART0ADDR, byte);
 }
-
-void
-uartintr(void)
-{
-  consoleintr(uartgetc);
+ 
+/*
+ * print a string to the UART one character at a time
+ * const char *str: 0-terminated string
+ */
+void uart_puts(char *str) {
+	while (*str) {
+		uart_putc(*str++);
+	}
 }
+ 
+	

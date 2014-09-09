@@ -1,6 +1,7 @@
 OBJS = \
+	mmio.o\
+	uart.o\
 	main.o\
-
 #	bio.o\
 #	console.o\
 #	exec.o\
@@ -69,6 +70,16 @@ QEMU = $(shell if which qemu > /dev/null; \
 	echo "***" 1>&2; exit 1)
 endif
 
+# select compile target (QEMU or REAL) by make option
+TARGET = 
+
+# select liker-script
+ifeq ($(TARGET), REAL)
+LS = kernel-real.ld
+else
+LS = kernel-qemu.ld
+endif
+
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
@@ -76,10 +87,10 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -Werror -fno-omit-frame-pointer -mcpu=arm1176jzf-s -g
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -Werror -fno-omit-frame-pointer -mcpu=arm1176jzf-s -g -D"$(TARGET)"
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 #ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
-ASFLAGS = -gdwarf-2 -mcpu=arm1176jzf-s -g
+ASFLAGS = -gdwarf-2 -mcpu=arm1176jzf-s -g -D"$(TARGET)"
 # FreeBSD ld wants ``elf_i386_fbsd''
 #LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 LDFLAGS += -m $(shell $(LD) -V | grep armelf 2>/dev/null)
@@ -119,10 +130,14 @@ LDFLAGS += -m $(shell $(LD) -V | grep armelf 2>/dev/null)
 
 #kernel: $(OBJS) entry.o entryother initcode kernel.ld
 #	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
-kernel: $(OBJS) entry.o kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS)
+kernel: $(OBJS) entry.o $(LS)
+	$(LD) $(LDFLAGS) -T $(LS) -o kernel entry.o $(OBJS)
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
+	$(OBJCOPY) kernel -O binary kernel.img
+
+
+
 
 # kernelmemfs is a copy of kernel that maintains the
 # disk image in memory instead of writing to a disk.
@@ -189,9 +204,14 @@ fs.img: mkfs README $(UPROGS)
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*.o *.d *.asm *.sym vectors.S bootblock entryother \
-	initcode initcode.out kernel xv6.img fs.img kernelmemfs mkfs \
+	initcode initcode.out kernel kernel.img xv6.img fs.img kernelmemfs mkfs \
 	.gdbinit \
 	$(UPROGS)
+
+mksd:
+	cp -f kernel.img /media/boot/kernel.img
+	umount /media/boot
+	umount /media/5d18be51-3217-4679-9c72-a54e0fc53d6b
 
 # make a printout
 FILES = $(shell grep -v '^\#' runoff.list)
