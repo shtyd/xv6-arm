@@ -151,9 +151,10 @@ struct segdesc {
 #define TEX             0x001     // Type Extension Field:  (with B and C bit)
 #define S               0x0     // System Protection
 #define R               0x0     // ROM Protection
-#define AP              0x2     // Access Permission: supervisor:R/W, user:R (with S and R bit)
+#define AP              0x2     // Access Permission: supervisor:R/W, user:R (with APX bit)
 #define APX             0x0     // Access Permission Extension
 #define nG              0x0     // Not Global
+
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)   ((uint)(pte) & ~0xFFF)
 #define PTE_FLAGS(pte)  ((uint)(pte) &  0xFFF)
