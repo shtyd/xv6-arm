@@ -100,19 +100,20 @@ struct segdesc {
 #define STS_IG32    0xE     // 32-bit Interrupt Gate
 #define STS_TG32    0xF     // 32-bit Trap Gate
 
+//***************************ARM********************************
 // A virtual address 'la' has a three-part structure as follows:
 //
-// +--------10------+-------10-------+---------12----------+
-// | Page Directory |   Page Table   | Offset within Page  |
-// |      Index     |      Index     |                     |
-// +----------------+----------------+---------------------+
-//  \--- PDX(va) --/ \--- PTX(va) --/ 
+// +--------12--------+------8-------+---------12----------+
+// |    1-level PT    |  2-level PT  | Offset within Page  |
+// |      Index       |     Index    |                     |
+// +------------------+--------------+---------------------+
+//  \--- PDX(va) ----/ \-- PTX(va) -/ 
 
 // page directory index
-#define PDX(va)         (((uint)(va) >> PDXSHIFT) & 0x3FF)
+#define PDX(va)         (((uint)(va) >> PDXSHIFT) & 0xFFF)
 
 // page table index
-#define PTX(va)         (((uint)(va) >> PTXSHIFT) & 0x3FF)
+#define PTX(va)         (((uint)(va) >> PTXSHIFT) & 0xFF)
 
 // construct virtual address from indexes and offset
 #define PGADDR(d, t, o) ((uint)((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
@@ -122,13 +123,15 @@ struct segdesc {
 #define NTTENTRIES      4096    // number of entries per Translation table(ARM)
 #define NPTENTRIES      1024    // # PTEs per page table
 #define PGSIZE          4096    // bytes mapped by a page
+#define SECTSIZE     1024*1024  //1M section
 
 #define PGSHIFT         12      // log2(PGSIZE)
 #define PTXSHIFT        12      // offset of PTX in a linear address
-#define PDXSHIFT        22      // offset of PDX in a linear address
+#define PDXSHIFT        20      // offset of PDX in a linear address
 
-#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
-#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
+#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1)) //切り上げ
+#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))           //切り捨て
+#define SECTROUNDUP(sz)  (((sz)+SECTSIZE-1) & ~(SECTSIZE-1))
 
 // Page table/directory entry flags.
 #define PTE_P           0x001   // Present
@@ -155,9 +158,12 @@ struct segdesc {
 #define APX             0x0     // Access Permission Extension
 #define nG              0x0     // Not Global
 
-// Address in page table or page directory entry
+// Address that page table or page directory entry holds
+#define PDE_ADDR(pde)   ((uint)(pde) & ~0x3FF)
+#define PDE_FLAGS(pde)  ((uint)(pde) &  0x3FF)
 #define PTE_ADDR(pte)   ((uint)(pte) & ~0xFFF)
 #define PTE_FLAGS(pte)  ((uint)(pte) &  0xFFF)
+
 
 #ifndef __ASSEMBLER__
 typedef uint pte_t;

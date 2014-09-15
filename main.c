@@ -8,12 +8,27 @@
 #include "uart.h"
 
 
+extern pde_t *kpgdir;
+extern char end[]; // first address after kernel loaded from ELF file
+
 volatile unsigned int * const UART0 = (unsigned int *)UART0ADDR;
 extern void uart_init();
+
+unsigned int test_end;
 
 int main(void){
 	//uart_init(); おそらく不要
  	*UART0 = (unsigned int)0x44;
+
+	kinit1(end, P2V(4*1024*1024));  /*xv6の方では4MB分のfreelistを作っているが、0xc0400000は*/
+	                                /*mapしていないので、2MB分で済ませる。これで収まるし。*/
+	                                /*end(0xc0014040あたり)のページサイズ分の切り上げ ~ */
+	                                /* 0xc0200000 をfreelistにする*/
+	uart_puts("\nkinit1 OK\n");
+
+	kvmalloc();                     // kernel page table
+
+	uart_puts("\nkvmalloc OK\n");
 
 	while(1){}
 	return 0;
@@ -131,15 +146,19 @@ pde_t EntryPageTable[NTTENTRIES] = {         //Number of Translation table entri
 	[0x002] = 0 | (0x002 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
+	[0x003] = 0 | (0x003 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
+
+
 
         //I/O Peripherals
-	[GPIO_BASE_P >> 20] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[PDX(GPIO_BASE_P)] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	[GPIO_BASE_V >> 20] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[PDX(GPIO_BASE_V)] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	[UART0_BASE_V >> 20] = 0 | ((UART0_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	[PDX(UART0_BASE_V)] = 0 | ((UART0_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
 
@@ -152,5 +171,13 @@ pde_t EntryPageTable[NTTENTRIES] = {         //Number of Translation table entri
 
 	[0xc02] = 0 | (0x002 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
+
+	[0xc03] = 0 | (0x003 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
+	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2
+
+	//DEVSPACE
+
+	/* [PDX(DEVSPACE)] = 0 | (0x004 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12) */
+	/* | (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2, */
 
 };

@@ -1,4 +1,6 @@
+#ifndef INCLUDED_uart_h
 
+#define INCLUDED_uart_h
 
 // Controls actuation of pull up/down to ALL GPIO pins.
 #define GPPUD (GPIO_BASE_V + 0x94)
@@ -24,3 +26,5 @@
 #define UART0_ITIP (UART0_BASE_V + 0x84)
 #define UART0_ITOP (UART0_BASE_V + 0x88)
 #define UART0_TDR (UART0_BASE_V + 0x8C)
+
+#endif

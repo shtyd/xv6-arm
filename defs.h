@@ -63,9 +63,11 @@ void            ioapicinit(void);
 
 // kalloc.c
 char*           kalloc(void);
+char*           kalloc_pd(void);
 void            kfree(char*);
 void            kinit1(void*, void*);
 void            kinit2(void*, void*);
+void            check_fl(void);
 
 // kbd.c
 void            kbdintr(void);
@@ -158,7 +160,8 @@ extern struct spinlock tickslock;
 // uart.c
 void            uartinit(void);
 void            uartintr(void);
-void            uartputc(int);
+void            uart_putc(char byte);
+void            uart_puts(char *str);
 
 // vm.c
 void            seginit(void);

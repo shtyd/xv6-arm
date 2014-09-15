@@ -9,9 +9,9 @@ SECTIONS
 {
 	/* Link the kernel at this address: "." means the current address */
         /* Must be equal to KERNLINK */
-	. = 0x80100000;
+	. = 0xc0008000;
 
-	.text : AT(0x100000) {
+	.text : AT(0x8000) {
 		*(.text .stub .text.* .gnu.linkonce.t.*)
 	}
 
@@ -38,6 +38,8 @@ SECTIONS
 				   for this section */
 	}
 
+	PROVIDE(estab = .); /*for debug*/
+
 	/* Adjust the address for the data segment to the next page */
 	. = ALIGN(0x1000);
 
@@ -54,7 +56,7 @@ SECTIONS
 		*(.data)
 	}
 
-	PROVIDE(edata = .);
+	PROVIDE(bss = .);
 
 	.bss : {
 		*(.bss)

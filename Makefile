@@ -1,7 +1,10 @@
 OBJS = \
 	mmio.o\
-	uart.o\
+	kalloc.o\
 	main.o\
+	string.o\
+	vm.o\
+	uart.o\
 #	bio.o\
 #	console.o\
 #	exec.o\
@@ -73,12 +76,6 @@ endif
 # select compile target (QEMU or REAL) by make option
 TARGET = 
 
-# select liker-script
-ifeq ($(TARGET), REAL)
-LS = kernel-real.ld
-else
-LS = kernel-qemu.ld
-endif
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
@@ -130,8 +127,8 @@ LDFLAGS += -m $(shell $(LD) -V | grep armelf 2>/dev/null)
 
 #kernel: $(OBJS) entry.o entryother initcode kernel.ld
 #	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
-kernel: $(OBJS) entry.o $(LS)
-	$(LD) $(LDFLAGS) -T $(LS) -o kernel entry.o $(OBJS)
+kernel: $(OBJS) entry.o kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS)
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 	$(OBJCOPY) kernel -O binary kernel.img

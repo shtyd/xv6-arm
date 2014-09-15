@@ -1,13 +1,7 @@
 // Memory layout
-#ifdef QEMU
-#define EXTMEM  0x100000            // Start of extended memory(QEMU)
-#endif
 
-#ifdef REAL
 #define EXTMEM  0x8000            // Start of extended memory(REAL)
-#endif
-
-#define PHYSTOP 0xE000000           // Top physical memory
+#define PHYSTOP 0x2000000           // Top physical memory (512MB)
 #define DEVSPACE 0xFE000000         // Other devices are at high addresses
 
 // MMI/O layout (GPI/O and UART)

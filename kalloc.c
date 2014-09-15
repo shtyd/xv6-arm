@@ -8,19 +8,24 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "spinlock.h"
+#include "uart.h"
 
 void freerange(void *vstart, void *vend);
+
 extern char end[]; // first address after kernel loaded from ELF file
 
 struct run {
-  struct run *next;
+	struct run *next;
 };
 
 struct {
-  struct spinlock lock;
-  int use_lock;
-  struct run *freelist;
+	// struct spinlock lock;
+	//int use_lock;
+	struct run *freelist;
 } kmem;
+
+char *kakunin1,*kakunin2,*kakunin3,*kakunin4,*kakunin5, *fl;
+extern int t_flag;
 
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
@@ -30,25 +35,29 @@ struct {
 void
 kinit1(void *vstart, void *vend)
 {
-  initlock(&kmem.lock, "kmem");
-  kmem.use_lock = 0;
-  freerange(vstart, vend);
+	uart_puts("kinit1\n");
+	// initlock(&kmem.lock, "kmem");
+	// kmem.use_lock = 0;
+	freerange(vstart, vend);
 }
 
 void
 kinit2(void *vstart, void *vend)
 {
-  freerange(vstart, vend);
-  kmem.use_lock = 1;
+	uart_puts("kinit2\n");
+	freerange(vstart, vend);
+	// kmem.use_lock = 1;
 }
 
 void
 freerange(void *vstart, void *vend)
 {
-  char *p;
-  p = (char*)PGROUNDUP((uint)vstart);
-  for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
-    kfree(p);
+	uart_puts("freerange\n");
+	char *p;
+	p = (char*)PGROUNDUP((uint)vstart); // 切り上げ
+
+	for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
+		kfree(p);
 }
 
 //PAGEBREAK: 21
@@ -59,21 +68,39 @@ freerange(void *vstart, void *vend)
 void
 kfree(char *v)
 {
-  struct run *r;
+	struct run *r;
+	
+	//アドレスvがページ境界に合っているか、endより大きいか、PHYSTOP以下であるか
+	if((uint)v % PGSIZE || v < end || v2p(v) >= PHYSTOP)
+		uart_puts("kfree_panic");
+	//panic("kfree");
+//	uart_puts("C");
+	// Fill with junk to catch dangling refs. ??
+	// freedメモリ空間は１で埋め尽くす.
+	memset(v, 1, PGSIZE);
+	
+//	uart_puts("D");
+	// if(kmem.use_lock)
+	//  acquire(&kmem.lock);
+	r = (struct run*)v;
+	r->next = kmem.freelist;      /*r->nextに既存のfreeリストを代入*/
+	kmem.freelist = r;            /*freeリストがこのrを指すようにする。*/
+	                              /*結局、rがfreeリストの先頭に挿入されたということになる*/
+	
+	fl = (char*)kmem.freelist;
+//	uart_puts("E");
+	//if(kmem.use_lock)
+	//  release(&kmem.lock);
+}
 
-  if((uint)v % PGSIZE || v < end || v2p(v) >= PHYSTOP)
-    panic("kfree");
-
-  // Fill with junk to catch dangling refs.
-  memset(v, 1, PGSIZE);
-
-  if(kmem.use_lock)
-    acquire(&kmem.lock);
-  r = (struct run*)v;
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  if(kmem.use_lock)
-    release(&kmem.lock);
+void
+check_fl(void)
+{
+	kakunin1 = (char*)kmem.freelist;
+	kakunin2 = (char*)kmem.freelist->next;
+	kakunin3 = (char*)kmem.freelist->next->next;
+	kakunin4 = (char*)kmem.freelist->next->next->next;
+	kakunin5 = (char*)kmem.freelist->next->next->next->next;
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -82,15 +109,64 @@ kfree(char *v)
 char*
 kalloc(void)
 {
-  struct run *r;
+	struct run *r;
+	
+	// if(kmem.use_lock)
+	//  acquire(&kmem.lock);
+	r = kmem.freelist;
+       	
+//	check_fl();
 
-  if(kmem.use_lock)
-    acquire(&kmem.lock);
-  r = kmem.freelist;
-  if(r)
-    kmem.freelist = r->next;
-  if(kmem.use_lock)
-    release(&kmem.lock);
-  return (char*)r;
+        // freelistが空でないならば、その先頭の要素アドレスを返し、リストの次の要素を先頭にする。
+        // (つまりリストの先頭要素を削除する)
+	if(r)
+		kmem.freelist = r->next;
+	else
+		uart_puts("no elements in free list\n");
+
+	//if(kmem.use_lock)
+	//  release(&kmem.lock);
+	// freeリストの要素がひとつもなければ0を返す。
+	/* kakunin = (char*)kmem.freelist;   //現在２つ目のfreelistの要素が0になっている。 */
+	/* while(1) {} */
+
+
+	return (char*)r;
+}
+
+//16KB境界に整列した4KBの物理メモリを探して取得する。
+char*
+kalloc_pd(void)
+{
+       struct run *r, *s;
+       
+       // if(kmem.use_lock)
+       //  acquire(&kmem.lock);
+       s = kmem.freelist;
+       r = s->next;
+
+       //リストの最初が16KB境界にあるかどうか
+       if (!((uint)s % (PGSIZE * 4)))
+       {
+	       kmem.freelist = s->next;
+	       return (char*)s;
+       }
+
+       //16KB境界にある要素を見つけるまでループ
+       while ((uint)r % (PGSIZE * 4))
+       {
+	       s = r;
+	       r = s->next;
+       }
+       
+       //リンクをつなぎ直して該当要素の削除 (本当にこれできてますか!?)
+       s->next = r->next;
+
+       return (char*)r;       
+       //if(r)
+       //  kmem.freelist = r->next;
+       //if(kmem.use_lock)
+       //  release(&kmem.lock);
+       //return (char*)r;
 }
 
