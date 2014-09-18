@@ -20,10 +20,8 @@ int main(void){
 	//uart_init(); おそらく不要
  	*UART0 = (unsigned int)0x44;
 
-	kinit1(end, P2V(4*1024*1024));  /*xv6の方では4MB分のfreelistを作っているが、0xc0400000は*/
-	                                /*mapしていないので、2MB分で済ませる。これで収まるし。*/
-	                                /*end(0xc0014040あたり)のページサイズ分の切り上げ ~ */
-	                                /* 0xc0200000 をfreelistにする*/
+	kinit1(end, P2V(4*1024*1024));  /*end(0xc0014040あたり)のページサイズ分の切り上げ ~ */
+	                                /* 0xc0400000 をfreelistにする*/
 	uart_puts("\nkinit1 OK\n");
 
 	kvmalloc();                     // kernel page table
@@ -150,7 +148,6 @@ pde_t EntryPageTable[NTTENTRIES] = {         //Number of Translation table entri
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
 
-
         //I/O Peripherals
 	[PDX(GPIO_BASE_P)] = 0 | ((GPIO_BASE_P >> 20) << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
@@ -173,11 +170,7 @@ pde_t EntryPageTable[NTTENTRIES] = {         //Number of Translation table entri
 	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
 	[0xc03] = 0 | (0x003 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12)
-	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2
+	| (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2,
 
-	//DEVSPACE
-
-	/* [PDX(DEVSPACE)] = 0 | (0x004 << 20) | (NS << 19) | (nG << 17) | (S << 16) | (APX << 15) | (TEX <<12) */
-	/* | (AP << 10) | (P << 9) | (DOMAIN << 5) | (XN << 4) | (C << 3) | (B << 2) | 0x2, */
 
 };

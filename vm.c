@@ -83,7 +83,7 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
 	memset(pgtab, 0, PGSIZE);
 
 	/*page directory entryに中身を入れる*/
-	*pde = v2p(pgtab) | (DOMAIN << 5) | (NS << 3) | (0 << 1) | (1 << 0); //coarse page table
+	*pde = 0 | v2p(pgtab) | (DOMAIN << 5) | (NS << 3) | (0 << 1) | (1 << 0); //coarse page table
 
 	return &pgtab[PTX(va)];
 }
@@ -105,14 +105,14 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 		/*page directoryからpage table entryのアドレスを取得*/
 		if ((pte = walkpgdir(pgdir, a, 1)) == 0)
 			return -1;
-
+	 
 		/*そのpage tableへの参照は許可されているかチェック*/
 		/*とりあえずやらない*/
 		/* if (*pte & PTE_P) */
-		/* 	uart_puts("remap\n"); */
+		/*uart_puts("remap\n"); */
 
 		/*page table entryの中身を入れる.*/
-		*pte = pa | (nG << 11) | (S << 10) | (APX << 9) | (TEX << 6) | (AP << 4)
+		*pte = 0 | pa | (nG << 11) | (S << 10) | (APX << 9) | (TEX << 6) | (AP << 4)
 			| (C << 3) | (B << 2) | (1 << 1) | (XN << 0);
 		
 		uart_puts("A");
@@ -159,11 +159,9 @@ static struct kmap {
 } kmap[] = {
 	{ (void*)KERNBASE, 0,             EXTMEM,    PTE_W}, // I/O space
 	{ (void*)KERNLINK, V2P(KERNLINK), V2P(data), PTE_W},     // kern text+rodata+stab+stabstr
-	{ (void*)data,     V2P(data),     V2P(data) + 0x10000,   PTE_W}, // kern data+bss
-	{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x8000 ,PTE_W}, // more devices サイズを妥協した
+	{ (void*)data,     V2P(data),     V2P(data) + 0x20000,   PTE_W}, // kern data+bss
+	{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices サイズを妥協しxた
 	{ (void*)UART0_BASE_V, UART0_BASE_P, UART0_BASE_P + 0x1000 ,PTE_W},
-	{ (void*)0xc0200000, 0x00500000, 0x00500000 + 0x1000 ,PTE_W},
-	{ (void*)0xc0300000, 0x00500000, 0x00500000 + 0x1000 ,PTE_W},	
 };
 
 
@@ -179,12 +177,6 @@ setupkvm(void)
 	/*空のpage directoryを取得(16KB alignされている必要アリ)*/
 	if((pgdir = (pde_t*)kalloc_pd()) == 0)
 		return 0;
-
-	pgdir_kakunin1 = (char*)pgdir;
-
-	test_data = (unsigned int)data;
-	test_bss = (unsigned int)bss;
-	test_estab = (unsigned int)estab;
 
 	memset(pgdir, 0, PGSIZE);
 
@@ -217,15 +209,6 @@ kvmalloc(void)
 	switchkvm();
 }
 
-/* static void flush_tlb (void) */
-/* { */
-/*     uint val = 0; */
-/*     asm("MCR p15, 0, %[r], c8, c7, 0" : :[r]"r" (val):); */
-
-/*     // invalid entire data and instruction cache */
-/*     asm ("MCR p15,0,%[r],c7,c10,0": :[r]"r" (val):); */
-/*     asm ("MCR p15,0,%[r],c7,c11,0": :[r]"r" (val):); */
-/* } */
 
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
@@ -233,34 +216,25 @@ void
 switchkvm(void)
 {
 	unsigned int kpgdir_addr = v2p(kpgdir);
-	test_kpgdir = kpgdir_addr;
+
 	uart_puts("before switch\n");
 
-	//switch page table 
+	//switch page table
 	asm volatile("MCR p15, 0, %[src], c2, c0, 0" :: [src]"r"(kpgdir_addr));
-//	asm volatile("MRC p15, 0, r8, c2, c0, 0");
 
-	asm volatile("nop");
-	asm volatile("nop");
-	asm volatile("nop");
+	// Invalidate TLB (これ入れるとAbortする。)
+	/* asm volatile("ldr r2, =0"); */
+	/* asm volatile("MCR p15, 0, r2, c8, c5, 0");  //Invalidate unlocked Inst TLB entries */
+	/* asm volatile("MCR p15, 0, r2, c8, c5, 1");  //Invalidate unlocked Data TLB entries */
 
-//	flush_tlb();
+	// invalidate Instruction Cache (p.3-70)
+	asm volatile("ldr r2, =0");
+	asm volatile("MCR p15, 0, r2, c7, c5, 0");  //Invalidate Entire Instruction Cache
+	asm volatile("MCR p15, 0, r2, c7, c6, 0");  //Invalidate Entire Data Cache
+	asm volatile("MCR p15, 0, r2, c7, c5, 4");  //Flush Instruction Buffer
+	asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache
 
-
-	//Address Translation Test
-	asm volatile("ldr r5, =0x42");
-	asm volatile("ldr r6, =0xc0200100");
-	asm volatile("str r5, [r6]");
-	asm volatile("ldr r7, =0xc0300100");
-	asm volatile("ldr r8, [r7]");
-
-	/*切り替えたらTLBフラッシュなどが必要なのでは*/	
 	uart_puts("switchkvm done\n");
-
-	/* asm volatile("MRC p15, 0, r9, c5, c0, 0"); //Read Data Fault Status Register */
-	/* asm volatile("MRC p15, 0, r10, c6, c0, 0"); //Read Fault Address Register */
-	/* asm volatile("MRC p15, 0, r11, c5, c0, 1"); //Read Inst Fault Status Register */
-	/* asm volatile("MRC p15, 0, r12, c6, c0, 2"); //Read Inst Fault Address Register */
 }
 
 // Switch TSS and h/w page table to correspond to process p.

@@ -159,7 +159,7 @@ kalloc_pd(void)
 	       r = s->next;
        }
        
-       //リンクをつなぎ直して該当要素の削除 (本当にこれできてますか!?)
+       //リンクをつなぎ直して該当要素の削除
        s->next = r->next;
 
        return (char*)r;       
