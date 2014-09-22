@@ -17,7 +17,6 @@ extern void uart_init();
 unsigned int test_end;
 
 int main(void){
-	int i;
 
 	//uart_init(); おそらく不要
  	*UART0 = (unsigned int)0x44;
@@ -27,12 +26,10 @@ int main(void){
 	uart_puts("\nkinit1 OK\n");
 
 	kvmalloc();                     // kernel page table
-	for(i = 0; i < 500000; i++);		
 	uart_puts("\nkvmalloc OK\n");
 
 	//initialize Exception Vector Table(p.2-36 Exceptions)
 	trap_init();
-	for(i = 0; i < 500000; i++); //UARTがきれいに出ない。待たせると出てくれる。
 	uart_puts("\ntrap_init OK\n");
 
 	return 0;
