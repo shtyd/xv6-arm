@@ -13,11 +13,13 @@ extern char estab[];  // defined by kernel.ld
 
 pde_t *kpgdir;  // for use in scheduler()
 struct segdesc gdt[NSEGS];
-char *pgdir_kakunin1,*pgdir_kakunin2, *pgtab_kakunin;
+//char *pgdir_kakunin1,*pgdir_kakunin2, *pgtab_kakunin;
 
-int test_count = 0;
-unsigned int test_kpgdir, test_data, test_bss, test_estab;
-char test_c;
+//int test_count = 0;
+//unsigned int test_kpgdir, test_data, test_bss, test_estab;
+//char test_c;
+
+
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
 /* void */
@@ -124,7 +126,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 		a += PGSIZE;
 		pa += PGSIZE;
 	}
-	uart_puts("\nmappage done\n");
+	uart_puts("\nmappage done\n\n");
 	return 0;
 }
 
@@ -162,6 +164,7 @@ static struct kmap {
 	{ (void*)data,     V2P(data),     V2P(data) + 0x20000,   PTE_W}, // kern data+bss
 	{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices サイズを妥協しxた
 	{ (void*)UART0_BASE_V, UART0_BASE_P, UART0_BASE_P + 0x1000 ,PTE_W},
+	{ (void*)VEC_TBL, 0x7000, 0x8000, PTE_W}   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
 };
 
 
@@ -217,8 +220,6 @@ switchkvm(void)
 {
 	unsigned int kpgdir_addr = v2p(kpgdir);
 
-	uart_puts("before switch\n");
-
 	//switch page table
 	asm volatile("MCR p15, 0, %[src], c2, c0, 0" :: [src]"r"(kpgdir_addr));
 
@@ -232,8 +233,8 @@ switchkvm(void)
 	asm volatile("MCR p15, 0, r2, c7, c5, 0");  //Invalidate Entire Instruction Cache
 	asm volatile("MCR p15, 0, r2, c7, c6, 0");  //Invalidate Entire Data Cache
 	asm volatile("MCR p15, 0, r2, c7, c5, 4");  //Flush Instruction Buffer
-	asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache
-
+	asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache	
+	
 	uart_puts("switchkvm done\n");
 }
 

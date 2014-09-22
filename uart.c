@@ -73,11 +73,11 @@ void uart_init() {
  */
 void uart_putc(char byte) {
 	// wait for UART to become ready to transmit
-	while (1) {
-		if (!(mmio_read(UART0_FR) & (1 << 5))) {
-			break;
-		}
-	}
+	/* while (1) { */
+	/* 	if (!(mmio_read(UART0_FR) & (1 << 5))) { */
+	/* 		break; */
+	/* 	} */
+	/* } */
 	mmio_write(UART0ADDR, byte);
 }
  

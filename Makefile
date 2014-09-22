@@ -5,6 +5,8 @@ OBJS = \
 	string.o\
 	vm.o\
 	uart.o\
+	trap.o\
+	trap_asm.o\
 #	bio.o\
 #	console.o\
 #	exec.o\

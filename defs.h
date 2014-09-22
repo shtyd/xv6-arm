@@ -154,8 +154,28 @@ void            timerinit(void);
 // trap.c
 void            idtinit(void);
 extern uint     ticks;
-void            tvinit(void);
+void            trap_init(void);
+void            dump_trapframe(struct trapframe *tr);
 extern struct spinlock tickslock;
+void            swi_handler(struct trapframe *r);
+void            irq_handler(struct trapframe *r);
+void            reset_handler(struct trapframe *r);
+void            und_handler(struct trapframe *r);
+void            dabort_handler(struct trapframe *r);
+void            pabort_handler(struct trapframe *r);
+void            reserved_handler(struct trapframe *r);
+void            fiq_handler(struct trapframe *r);
+
+// trap_asm.S
+void            trap_reset(void);
+void            trap_und(void);
+void            trap_swi(void);
+void            trap_pabort(void);
+void            trap_dabort(void);
+void            trap_reserved(void);
+void            trap_irq(void);
+void            trap_fiq(void);
+
 
 // uart.c
 void            uartinit(void);

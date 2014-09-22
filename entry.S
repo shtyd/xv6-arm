@@ -81,6 +81,12 @@ entry:
 	@ldr r4, =UART0ADDR
 	@str r3, [r4]
 
+	@ set up stack for virtual address
+	mov r0, sp
+	ldr r1, =KERNBASE
+	add r0, r1
+	mov sp, r0
+	
 	@ jump to main()
 	@ bは相対ジャンプ。高い仮想アドレスにジャンプしなくてはならないから
 	@ b mainではダメ。プログラムカウンタの値を直接変更することで
