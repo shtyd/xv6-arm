@@ -75,7 +75,7 @@ walkpgdir(pde_t *pgdir, const void *va, int alloc)
 	//
 	if ((*pde & PDE_TYPES) == 1)
 	{	       
-		pgtab = (pte_t*)(*pde & 0xfffff800);
+		pgtab = (pte_t*)(*pde & 0xfffff800); //Coarse page tableでないなら、このマスクも変わる。
 	}
 	else
 	{
@@ -112,12 +112,11 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 		/*page directoryからpage table entryのアドレスを取得*/
 		if ((pte = walkpgdir(pgdir, a, 1)) == 0)
 			return -1;
-	 
-		/*そのpage tableへの参照は許可されているかチェック*/
-		/*とりあえずやらない*/
-		/* if (*pte & PTE_P) */
-		/*uart_puts("remap\n"); */
 
+		//すでにマップしているページかどうかチェック
+		if (*pte & 0b10) //Coarse page tableでないならこのビットも変わる。
+			uart_puts("resetting page table entry\n");
+		
 		/*page table entryの中身を入れる.*/
 		*pte = 0 | pa | (nG << 11) | (S << 10) | (APX << 9) | (TEX << 6) | (AP << 4)
 			| (C << 3) | (B << 2) | (1 << 1) | (XN << 0);
@@ -173,11 +172,6 @@ static struct kmap {
 	{ (void*)VEC_TBL, 0x6000, 0x7000 , PTE_W},   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
 	{ (void*)0xc0024000, 0x20000, 0x21000 , PTE_W},
 	{ (void*)0xc0025000, 0x20000, 0x21000 , PTE_W},
-	
-	/* { (void*)VEC_TBL+0x0000, 0x6000, 0x7000, PTE_W}, */
-	/* { (void*)VEC_TBL+0x1000, 0x6000, 0x7000, PTE_W}, */
-	/* { (void*)VEC_TBL+0x2000, 0x6000, 0x7000, PTE_W}, */
-	/* { (void*)VEC_TBL+0x3000, 0x6000, 0x7000, PTE_W}, */
 };
 
 
@@ -244,10 +238,10 @@ switchkvm(void)
 	//switch page table
 	asm volatile("MCR p15, 0, %[src], c2, c0, 0" :: [src]"r"(kpgdir_addr));
 
-	// Invalidate TLB (これ入れるとAbortする。)
-	/* asm volatile("ldr r2, =0"); */
-	/* asm volatile("MCR p15, 0, r2, c8, c5, 0");  //Invalidate unlocked Inst TLB entries */
-	/* asm volatile("MCR p15, 0, r2, c8, c5, 1");  //Invalidate unlocked Data TLB entries */
+	// Invalidate TLB
+	asm volatile("ldr r2, =0");
+	asm volatile("MCR p15, 0, r2, c8, c5, 0");  //Invalidate unlocked Inst TLB entries
+	asm volatile("MCR p15, 0, r2, c8, c5, 1");  //Invalidate unlocked Data TLB entries
 
 	// invalidate Instruction Cache (p.3-70)
 	asm volatile("ldr r2, =0");

@@ -106,15 +106,21 @@ trap_init(void)
 	volatile unsigned int *vec_tbl = (unsigned int *)VEC_TBL;	
 	static unsigned int const LDR_PCPC = 0xe59ff00u;       
 
-	/* //Address Translation Test */
-	asm volatile("ldr r1, =0xc0024100");
-	asm volatile("ldr r2, =0x46");
-	asm volatile("str r2, [r1]");
+	/* /\* //Address Translation Test *\/ */
+	/* unsigned int reg; */
+
+	/* asm volatile("ldr r1, =0xc0024100"); */
+	/* asm volatile("ldr r2, =0x46"); */
+	/* asm volatile("str r2, [r1]"); */
 	
-	asm volatile("ldr r5, =0xc0025100");
-	asm volatile("ldr r3, [r5]");
-	asm volatile("ldr r1, =0xf2201000"); //REAL
-	asm volatile("str r3, [r1]");
+	/* asm volatile("ldr r5, =0xc0025100"); */
+	/* asm volatile("ldr %[dst], [r5]" : [dst]"=r"(reg)); */
+	
+	/* if (reg == 0x46) */
+	/* 	uart_puts("Translation Test Success!\n"); */
+	/* else */
+	/* 	uart_puts("Translation Test Failed!\n"); */
+
        
 	//Select High Exception Vector Address
 	asm volatile("MRC p15, 0, r2, c1, c0, 0"); //Read Control Register
