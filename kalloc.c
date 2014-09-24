@@ -86,8 +86,7 @@ kfree(char *v)
 	r->next = kmem.freelist;      /*r->nextに既存のfreeリストを代入*/
 	kmem.freelist = r;            /*freeリストがこのrを指すようにする。*/
 	                              /*結局、rがfreeリストの先頭に挿入されたということになる*/
-	
-	fl = (char*)kmem.freelist;
+
 //	uart_puts("E");
 	//if(kmem.use_lock)
 	//  release(&kmem.lock);
@@ -134,39 +133,39 @@ kalloc(void)
 	return (char*)r;
 }
 
-//16KB境界に整列した4KBの物理メモリを探して取得する。
-char*
-kalloc_pd(void)
-{
-       struct run *r, *s;
+/* //16KB境界に整列した16KBの物理メモリを探して取得する。 */
+/* char* */
+/* kalloc_pd(void) */
+/* { */
+/*        struct run *r, *s; */
        
-       // if(kmem.use_lock)
-       //  acquire(&kmem.lock);
-       s = kmem.freelist;
-       r = s->next;
+/*        // if(kmem.use_lock) */
+/*        //  acquire(&kmem.lock); */
+/*        s = kmem.freelist; */
+/*        r = s->next; */
 
-       //リストの最初が16KB境界にあるかどうか
-       if (!((uint)s % (PGSIZE * 4)))
-       {
-	       kmem.freelist = s->next;
-	       return (char*)s;
-       }
+/*        //リストの最初が16KB境界にあるかどうか */
+/*        if (!((uint)s % (PGSIZE * 4))) */
+/*        { */
+/* 	       kmem.freelist = s->next; */
+/* 	       return (char*)s; */
+/*        } */
 
-       //16KB境界にある要素を見つけるまでループ
-       while ((uint)r % (PGSIZE * 4))
-       {
-	       s = r;
-	       r = s->next;
-       }
+/*        //16KB境界にある要素を見つけるまでループ */
+/*        while ((uint)r % (PGSIZE * 4)) */
+/*        { */
+/* 	       s = r; */
+/* 	       r = s->next; */
+/*        } */
        
-       //リンクをつなぎ直して該当要素の削除
-       s->next = r->next;
+/*        //リンクをつなぎ直して該当要素の削除 */
+/*        s->next = r->next->next->next->next; */
 
-       return (char*)r;       
-       //if(r)
-       //  kmem.freelist = r->next;
-       //if(kmem.use_lock)
-       //  release(&kmem.lock);
-       //return (char*)r;
-}
+/*        return (char*)r;        */
+/*        //if(r) */
+/*        //  kmem.freelist = r->next; */
+/*        //if(kmem.use_lock) */
+/*        //  release(&kmem.lock); */
+/*        //return (char*)r; */
+/* } */
 

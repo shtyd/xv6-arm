@@ -106,6 +106,22 @@ trap_init(void)
 	volatile unsigned int *vec_tbl = (unsigned int *)VEC_TBL;	
 	static unsigned int const LDR_PCPC = 0xe59ff00u;       
 
+	/* //Address Translation Test */
+	asm volatile("ldr r1, =0xc0024100");
+	asm volatile("ldr r2, =0x46");
+	asm volatile("str r2, [r1]");
+	
+	asm volatile("ldr r5, =0xc0025100");
+	asm volatile("ldr r3, [r5]");
+	asm volatile("ldr r1, =0xf2201000"); //REAL
+	asm volatile("str r3, [r1]");
+       
+	//Select High Exception Vector Address
+	asm volatile("MRC p15, 0, r2, c1, c0, 0"); //Read Control Register
+	asm volatile("ldr r3, =0x2000");
+	asm volatile("orr r2, r3");
+	asm volatile("MCR p15, 0, r2, c1, c0, 0"); //Write Control Register
+
 	// Create the Exception Table
 	vec_tbl[0] = LDR_PCPC | 0x18; // Reset (SVC)
 	vec_tbl[1] = LDR_PCPC | 0x18; // Undefine Instruction (UND)
@@ -125,6 +141,9 @@ trap_init(void)
 	vec_tbl[14] = (unsigned int)trap_irq;
 	vec_tbl[15] = (unsigned int)trap_fiq;
 	
+	uart_puts("create the exception table done.\n");
+
+
 	//スタックがいるのか。
 	//initialize the stacks for different mode                                                       
 	/* for (i = 0; i < sizeof(modes)/sizeof(uint); i++) { */

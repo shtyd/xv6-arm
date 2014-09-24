@@ -1,6 +1,6 @@
-typedef unsigned int   uint;
+typedef unsigned int uint;
 typedef unsigned short ushort;
-typedef unsigned char  uchar;
+typedef unsigned char uchar;
 typedef uint pde_t;
 
 #ifndef NULL
@@ -27,3 +27,5 @@ struct trapframe {
     uint    r12;
     uint    pc;         // (lr on entry) instruction to resume execution
 };
+
+typedef void (*ISR) (struct trapframe *tf, int n);

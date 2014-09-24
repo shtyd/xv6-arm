@@ -1,84 +1,54 @@
-// Intel 8259A programmable interrupt controllers.
-
+// Support of ARM PrimeCell Vectored Interrrupt Controller (PL190)
 #include "types.h"
-#include "x86.h"
 #include "traps.h"
+#include "defs.h"
+#include "memlayout.h"
+#include "picirq.h"
 
-// I/O Addresses of the two programmable interrupt controllers
-#define IO_PIC1         0x20    // Master (IRQs 0-7)
-#define IO_PIC2         0xA0    // Slave (IRQs 8-15)
+// PL190 supports the vectored interrupts and non-vectored interrupts.
+// In this code, we use non-vected interrupts (aka. simple interrupt).
+// The flow to handle simple interrupts is as the following:
+//		1. an interrupt (IRQ) occurs, trap.c branches to our IRQ handler
+//		2. read the VICIRQStatus register, for each source generating
+//		   the interrrupt:
+//			2.1 locate the correct ISR
+//			2.2 execute the ISR
+//			2.3 clear the interrupt
+//		3 return to trap.c, which will resume interrupted routines
+// Note: must not read VICVectorAddr
 
-#define IRQ_SLAVE       2       // IRQ at which slave connects to master
+static volatile unsigned int *vic_base;
+static ISR isrs[NUM_ISR]; //Interrupt Service Routine
 
-// Current IRQ mask.
-// Initial IRQ mask has interrupt 2 enabled (for slave 8259A).
-static ushort irqmask = 0xFFFF & ~(1<<IRQ_SLAVE);
 
-static void
-picsetmask(ushort mask)
+
+static void default_isr (struct trapframe *tf, int n)
 {
-  irqmask = mask;
-  outb(IO_PIC1+1, mask);
-  outb(IO_PIC2+1, mask >> 8);
+    /* cprintf ("unhandled interrupt: %d\n", n); */
+    uart_puts("unhandled interrupt");
 }
 
-void
-picenable(int irq)
+
+// initialize the PL190 VIC
+// Vectored IRQ interrupt using VIC port
+void pic_init(void)
 {
-  picsetmask(irqmask & ~(1<<irq));
-}
+	int i;
 
-// Initialize the 8259A interrupt controllers.
-void
-picinit(void)
-{
-  // mask all interrupts
-  outb(IO_PIC1+1, 0xFF);
-  outb(IO_PIC2+1, 0xFF);
+	//Enables the VIC interface to determine interrupt vectors.
+	asm volatile("MRC p15, 0, r2, c1, c0, 0"); //Read Control Register
+	asm volatile("ldr r3, =0x1000000");
+	asm volatile("orr r2, r3");
+	asm volatile("MCR p15, 0, r2, c1, c0, 0"); //Write Control Register
 
-  // Set up master (8259A-1)
+	
+	vic_base = (unsigned int*)VIC_BASE; 
 
-  // ICW1:  0001g0hi
-  //    g:  0 = edge triggering, 1 = level triggering
-  //    h:  0 = cascaded PICs, 1 = master only
-  //    i:  0 = no ICW4, 1 = ICW4 required
-  outb(IO_PIC1, 0x11);
-
-  // ICW2:  Vector offset
-  outb(IO_PIC1+1, T_IRQ0);
-
-  // ICW3:  (master PIC) bit mask of IR lines connected to slaves
-  //        (slave PIC) 3-bit # of slave's connection to master
-  outb(IO_PIC1+1, 1<<IRQ_SLAVE);
-
-  // ICW4:  000nbmap
-  //    n:  1 = special fully nested mode
-  //    b:  1 = buffered mode
-  //    m:  0 = slave PIC, 1 = master PIC
-  //      (ignored when b is 0, as the master/slave role
-  //      can be hardwired).
-  //    a:  1 = Automatic EOI mode
-  //    p:  0 = MCS-80/85 mode, 1 = intel x86 mode
-  outb(IO_PIC1+1, 0x3);
-
-  // Set up slave (8259A-2)
-  outb(IO_PIC2, 0x11);                  // ICW1
-  outb(IO_PIC2+1, T_IRQ0 + 8);      // ICW2
-  outb(IO_PIC2+1, IRQ_SLAVE);           // ICW3
-  // NB Automatic EOI mode doesn't tend to work on the slave.
-  // Linux source code says it's "to be investigated".
-  outb(IO_PIC2+1, 0x3);                 // ICW4
-
-  // OCW3:  0ef01prs
-  //   ef:  0x = NOP, 10 = clear specific mask, 11 = set specific mask
-  //    p:  0 = no polling, 1 = polling mode
-  //   rs:  0x = NOP, 10 = read IRR, 11 = read ISR
-  outb(IO_PIC1, 0x68);             // clear specific mask
-  outb(IO_PIC1, 0x0a);             // read IRR by default
-
-  outb(IO_PIC2, 0x68);             // OCW3
-  outb(IO_PIC2, 0x0a);             // OCW3
-
-  if(irqmask != 0xFFFF)
-    picsetmask(irqmask);
+	//disable all interrupts
+	vic_base[VIC_INTENCLEAR] = 0xffffffff;
+	
+	for (i = 0; i < NUM_ISR; i++)
+	{
+		isrs[i] = default_isr;
+	}    
 }

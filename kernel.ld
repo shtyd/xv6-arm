@@ -62,7 +62,11 @@ SECTIONS
 		*(.bss)
 	}
 
-	PROVIDE(end = .);
+	. = ALIGN(0x1000);
+	
+
+
+	PROVIDE(end = .);	
 
 	/DISCARD/ : {
 		*(.eh_frame .note.GNU-stack)

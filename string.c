@@ -1,43 +1,24 @@
 #include "types.h"
-#include "x86.h"
 #include "defs.h"
 
-unsigned int mem_kakunin;
-
 void*
-memset(void *dst, int c, uint n)
+memset(void *dst, int c, uint size)
 {
-	/* if ((int)dst%4 == 0 && n%4 == 0) */
-	/* { */
-	/* 	c &= 0xFF; */
-	/* 	stosl(dst, (c<<24)|(c<<16)|(c<<8)|c, n/4); */
-	/* }  */
-	/* else */
-	/* 	stosb(dst, c, n); */
-	/* return dst; */
 	int i;
 	int f = 0;
-	int *addr = dst;
-//	uint dfsr;
+	unsigned int *addr = dst;
 
 	for (i = 0; i < 32; i++){
-//		uart_puts("F");
 		f = f | (c << i);
 	}
-	
-	for (i = 0; i < (n / 4); i++)
+
+	for (i = 0; i < (size / 4); i++)
 	{
-//		uart_puts("G");
 		*addr = f;
-		addr++; //addrは(int *)なので、これで４番地先に進む
-		/* asm volatile("MRC p15, 0, r6, c6, c0, 0"); //Read Fault Address Register */
-		/* asm volatile("MRC p15, 0, r7, c5, c0, 1"); //Read Instruction Fault Status Register */
-		/* asm volatile("MRC p15, 0, r8, c6, c0, 2"); //Read Instruction Fault Address Register */
-
+		addr++; //addrは(uint *)なので、これで４番地先(4byte先)に進む
 	}
-//	uart_puts("memset done\n");
-	return dst;
 
+	return dst;
 }
 
 /* int */

@@ -7,6 +7,7 @@ OBJS = \
 	uart.o\
 	trap.o\
 	trap_asm.o\
+	picirq.o\
 #	bio.o\
 #	console.o\
 #	exec.o\

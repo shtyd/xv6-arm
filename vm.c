@@ -9,14 +9,19 @@
 
 extern char data[];  // defined by kernel.ld
 extern char bss[];  // defined by kernel.ld
-extern char estab[];  // defined by kernel.ld
+extern char end[];  // defined by kernel.ld
 
 pde_t *kpgdir;  // for use in scheduler()
 struct segdesc gdt[NSEGS];
+
+//page directory : 4096 entry * 4byte = 16KB
+__attribute__((__aligned__(4096 * 4)))
+pde_t *kernel_pgdir[4096];
+
 //char *pgdir_kakunin1,*pgdir_kakunin2, *pgtab_kakunin;
 
-//int test_count = 0;
-//unsigned int test_kpgdir, test_data, test_bss, test_estab;
+int test_count = 0;
+unsigned int kakunin1, kakunin2;
 //char test_c;
 
 
@@ -54,39 +59,39 @@ struct segdesc gdt[NSEGS];
 static pte_t *
 walkpgdir(pde_t *pgdir, const void *va, int alloc)
 {
-	pde_t *pde;
 	pte_t *pgtab;
+	pde_t *pde;
 
 	/*page directoryからpage directory entryのアドレスを取得*/
 	pde = &pgdir[PDX(va)];
 
-	/*そのpage tableの参照が許可されているかチェック*/
-	/*とりあえずやらない*/
-	/* if (*pde & PTE_P) //ビット演算の&(ビット毎のAND) */
-	/* { */
-	/* 	/\*page directory entryからpage tableのアドレスを取得*\/ */
-	/* 	pgtab = (pte_t*)p2v(PDE_ADDR(*pde)); */
-	/* }  */
-	/* else  */
-	/* { */
+	//これから割り当てられようとしているエントリのページが
+	//既に存在しているかどうか確認
+	//下位２ビットを見て判断している。
+	//そのため、もしあるエントリが不要になったならば、
+	//それは０クリアする必要がある。
+	//今はCoarse page tableしか対応させていないので、
+	//もしセクションなどを使うならば、PDE_TYPESの値を変更すること.
+	//
+	if ((*pde & PDE_TYPES) == 1)
+	{	       
+		pgtab = (pte_t*)(*pde & 0xfffff800);
+	}
+	else
+	{
+		uart_puts("set new page directory entry!\n");
+		//page tableは1KBなのに、4KBのページを割り当ててるから非常に無駄が多い。
+		//page tableのメモリ領域を確保
+		if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
+			return 0;       
+		
+		memset(pgtab, 0, PGSIZE);
+		
+		/*page directory entryに中身を入れる*/
+		*pde = 0 | v2p(pgtab) | (DOMAIN << 5) | (NS << 3) | 0b01; //coarse page table
+	}
 
-	//page tableのメモリ領域を確保
-	if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
-		return 0;       
-
-	/* if (test_count == 3) */
-	/* { */
-	/* 	pgtab_kakunin = (char*)pgtab; */
-	/* 	check_fl(); */
-	/* 	while (1) {} */
-	/* } */
-	/* test_count++; */
-
-	memset(pgtab, 0, PGSIZE);
-
-	/*page directory entryに中身を入れる*/
-	*pde = 0 | v2p(pgtab) | (DOMAIN << 5) | (NS << 3) | (0 << 1) | (1 << 0); //coarse page table
-
+	//Page Table Entryのアドレスを返す
 	return &pgtab[PTX(va)];
 }
 
@@ -127,6 +132,7 @@ mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm)
 		pa += PGSIZE;
 	}
 	uart_puts("\nmappage done\n\n");
+
 	return 0;
 }
 
@@ -158,13 +164,20 @@ static struct kmap {
 	uint phys_start;
 	uint phys_end;
 	int perm;
-} kmap[] = {
+} kmap[] = { //phys_startは4KB align(0x1000)されている必要がある。
 	{ (void*)KERNBASE, 0,             EXTMEM,    PTE_W}, // I/O space
 	{ (void*)KERNLINK, V2P(KERNLINK), V2P(data), PTE_W},     // kern text+rodata+stab+stabstr
-	{ (void*)data,     V2P(data),     V2P(data) + 0x20000,   PTE_W}, // kern data+bss
-	{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices サイズを妥協しxた
+	{ (void*)data,     V2P(data),     V2P(end),   PTE_W}, // kern data+bss
+	//{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices
 	{ (void*)UART0_BASE_V, UART0_BASE_P, UART0_BASE_P + 0x1000 ,PTE_W},
-	{ (void*)VEC_TBL, 0x7000, 0x8000, PTE_W}   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
+	{ (void*)VEC_TBL, 0x6000, 0x7000 , PTE_W},   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
+	{ (void*)0xc0024000, 0x20000, 0x21000 , PTE_W},
+	{ (void*)0xc0025000, 0x20000, 0x21000 , PTE_W},
+	
+	/* { (void*)VEC_TBL+0x0000, 0x6000, 0x7000, PTE_W}, */
+	/* { (void*)VEC_TBL+0x1000, 0x6000, 0x7000, PTE_W}, */
+	/* { (void*)VEC_TBL+0x2000, 0x6000, 0x7000, PTE_W}, */
+	/* { (void*)VEC_TBL+0x3000, 0x6000, 0x7000, PTE_W}, */
 };
 
 
@@ -177,22 +190,25 @@ setupkvm(void)
 	pde_t *pgdir;
 	struct kmap *k;
 
-	/*空のpage directoryを取得(16KB alignされている必要アリ)*/
-	if((pgdir = (pde_t*)kalloc_pd()) == 0)
-		return 0;
+	//VEC_TBLのためのマップ（別のところでやることはできない？）
+	kmap[4].phys_start = v2p(kalloc());
+	kmap[4].phys_end = kmap[4].phys_start + 0x1000;
 
-	memset(pgdir, 0, PGSIZE);
+	/*空のpage directoryを取得(16KB alignされている必要アリ)*/
+	pgdir = (pde_t*)kernel_pgdir;
+
+	memset(pgdir, 0, PGSIZE * 4);
 
 	if (p2v(PHYSTOP) > (void*)DEVSPACE)
 		uart_puts("PHYSTOP too high\n");
-
+	
 	for(k = kmap; k < &kmap[NELEM(kmap)]; k++)
 	{
 		uart_puts("mappages\n");
 
 		/*page directoryをmapする*/
 		if (mappages(pgdir, k->virt, k->phys_end - k->phys_start,
-			    (uint)k->phys_start, k->perm) < 0)
+			     (uint)k->phys_start, k->perm) < 0)
 		{
 			uart_puts("mappages return number < 0\n");
 			return 0;
@@ -208,6 +224,11 @@ void
 kvmalloc(void)
 {
 	kpgdir = setupkvm();
+	if (kpgdir == 0)
+	{
+		uart_puts("setupkvm error\n");
+		while(1);
+	}
 	
 	switchkvm();
 }
@@ -233,8 +254,8 @@ switchkvm(void)
 	asm volatile("MCR p15, 0, r2, c7, c5, 0");  //Invalidate Entire Instruction Cache
 	asm volatile("MCR p15, 0, r2, c7, c6, 0");  //Invalidate Entire Data Cache
 	asm volatile("MCR p15, 0, r2, c7, c5, 4");  //Flush Instruction Buffer
-	asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache	
-	
+	asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache
+
 	uart_puts("switchkvm done\n");
 }
 

@@ -3,6 +3,9 @@
 #include "mmu.h"
 #include "param.h"	
 #include "uart.h"
+
+.text
+	.p2align 2
 	
 # By convention, the _start symbol specifies the ELF entry point.
 # Since we haven't set up virtual memory yet, our entry point is
@@ -15,9 +18,9 @@ _start = V2P_WO(entry)
 .globl entry
 entry:
 	#physical printf (for debug)
-	ldr r4, =UART0_BASE_P
-	mov r1, #0x41
-	str r1, [r4]	
+	@ldr r4, =UART0_BASE_P
+	@mov r1, #0x41
+	@str r1, [r4]	
 
 	@ Setup the stack pointer(これでいいのか？ まぁよさそう)
 	mov sp, #0x2000
@@ -39,7 +42,7 @@ entry:
 	ldr r1, =0x0
 	MCR p15, 0, r1, c2, c0, 2
 
-	@ Domain Access Control とりあえず全部managerにする。
+	@ Domain Access Control
 	ldr r1, =0xffffffff
 	MCR p15, 0, r1, c3, c0, 0
 	
@@ -63,6 +66,12 @@ entry:
 	nop
 	nop
 
+	@ Enable level-1 data cache
+	MRC p15, 0, r2, c1, c0, 0  @ Read Control Register configuration data
+	ldr r3, =0b100
+	orr r2, r2, r3
+	MCR p15, 0, r2, c1, c0, 0  @ Write Control Register configuration data
+	
 	// flush all TLB  書き方違う
 	ldr r2, =0x0
 	MCR p15, 0, r2, c8, c7, 0
@@ -71,27 +80,35 @@ entry:
 	MCR p15, 0, r2, c7, c5, 0
 	MCR p15 ,0, r2, c7, c6, 0
 
-	@ Address Translation Test
-	@ldr r1, =0x00201000
-	@ldr r2, =0x46
-	@str r2, [r1]
-	
-	@ldr r1, =0xc0201000
-	@ldr r3, [r1]	
-	@ldr r4, =UART0ADDR
-	@str r3, [r4]
-
 	@ set up stack for virtual address
-	mov r0, sp
-	ldr r1, =KERNBASE
-	add r0, r1
-	mov sp, r0
-	
+	LDR	sp, stack
+	ADD	sp, sp, #KSTACKSIZE	@ param.h	
+
 	@ jump to main()
 	@ bは相対ジャンプ。高い仮想アドレスにジャンプしなくてはならないから
 	@ b mainではダメ。プログラムカウンタの値を直接変更することで
 	@ 関数にジャンプする。
 	@ b main
 	ldr pc, =main
+
+
+	
+stack:
+	.long	stack0
+	
+.bss
+	.align	2
+stack0:
+	.skip	KSTACKSIZE
+stack_fiq:
+	.skip	KSTACKSIZE
+stack_irq:
+	.skip	KSTACKSIZE
+stack_svc:
+	.skip	KSTACKSIZE
+stack_undef:
+	.skip	KSTACKSIZE
+stack_abt:
+	.skip	KSTACKSIZE
 
 	

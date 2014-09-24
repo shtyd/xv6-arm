@@ -4,22 +4,15 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
-#include "x86.h"
 #include "uart.h"
 
 
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
 
-volatile unsigned int * const UART0 = (unsigned int *)UART0ADDR;
-extern void uart_init();
-
 unsigned int test_end;
 
 int main(void){
-
-	//uart_init(); おそらく不要
- 	*UART0 = (unsigned int)0x44;
 
 	kinit1(end, P2V(4*1024*1024));  /*end(0xc0014040あたり)のページサイズ分の切り上げ ~ */
 	                                /* 0xc0400000 をfreelistにする*/
@@ -32,6 +25,10 @@ int main(void){
 	trap_init();
 	uart_puts("\ntrap_init OK\n");
 
+	/* pic_init(); */
+	/* uart_puts("\npic_init OK\n"); */
+	
+	while(1){}
 	return 0;
 }
 /* static void startothers(void); */

@@ -8,6 +8,7 @@ struct spinlock;
 struct stat;
 struct superblock;
 
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -94,7 +95,7 @@ void            mpstartthem(void);
 
 // picirq.c
 void            picenable(int);
-void            picinit(void);
+void            pic_init(void);
 
 // pipe.c
 int             pipealloc(struct file**, struct file**);

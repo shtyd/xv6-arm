@@ -20,11 +20,18 @@
 #define UART0_BASE_V 0xf2201000
 #endif
 
+//VIC base address
+#define VIC_BASE 0xfffff000
+
+
+//Exception Vector Table Address
+#define VEC_TBL 0xffff0000
+
+
+
 // Key addresses for address space layout (see kmap in vm.c for layout)
 #define KERNBASE 0xc0000000         // First kernel virtual address
 #define KERNLINK (KERNBASE+EXTMEM)  // Address where kernel is linked
-
-#define VEC_TBL 0x0
 
 #ifndef __ASSEMBLER__
 

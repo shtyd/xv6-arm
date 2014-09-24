@@ -108,6 +108,12 @@ struct segdesc {
 // |      Index       |     Index    |                     |
 // +------------------+--------------+---------------------+
 //  \--- PDX(va) ----/ \-- PTX(va) -/ 
+//
+// pgdir, pgtab, page, 1 entry = 4byte
+// Page directory : 4096 entry * 4byte = 16KB 
+// Page table     : 256 entry * 4byte = 1KB
+// Page           : 4KB
+
 
 // page directory index
 #define PDX(va)         (((uint)(va) >> PDXSHIFT) & 0xFFF)
@@ -134,6 +140,8 @@ struct segdesc {
 #define SECTROUNDUP(sz)  (((sz)+SECTSIZE-1) & ~(SECTSIZE-1))
 
 // Page table/directory entry flags.
+#define PDE_TYPES       0x01    // mask for page type (Coarse page table only now)
+
 #define PTE_P           0x001   // Present
 #define PTE_W           0x002   // Writeable
 #define PTE_U           0x004   // User
@@ -154,7 +162,7 @@ struct segdesc {
 #define TEX             0x001     // Type Extension Field:  (with B and C bit)
 #define S               0x0     // System Protection
 #define R               0x0     // ROM Protection
-#define AP              0x2     // Access Permission: supervisor:R/W, user:R (with APX bit)
+#define AP              0x2     // Access Permission: Supervisor:R/W, User:R
 #define APX             0x0     // Access Permission Extension
 #define nG              0x0     // Not Global
 
