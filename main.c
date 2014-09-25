@@ -26,7 +26,7 @@ int main(void){
 	uart_puts("\ntrap_init OK\n");
 
 	/* pic_init(); */
-	/* uart_puts("\npic_init OK\n"); */
+	uart_puts("\npic_init OK\n");
 	
 	while(1){}
 	return 0;
