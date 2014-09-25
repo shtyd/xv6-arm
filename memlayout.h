@@ -21,7 +21,7 @@
 #endif
 
 //VIC base address
-#define VIC_BASE 0xfffff000
+#define VIC_BASE 0xfffef000
 
 
 //Exception Vector Table Address

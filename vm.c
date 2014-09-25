@@ -170,8 +170,7 @@ static struct kmap {
 	//{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices
 	{ (void*)UART0_BASE_V, UART0_BASE_P, UART0_BASE_P + 0x1000 ,PTE_W},
 	{ (void*)VEC_TBL, 0x6000, 0x7000 , PTE_W},   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
-	{ (void*)0xc0024000, 0x20000, 0x21000 , PTE_W},
-	{ (void*)0xc0025000, 0x20000, 0x21000 , PTE_W},
+	{ (void*)VIC_BASE, VIC_BASE, VIC_BASE + 0x1000 , PTE_W},
 };
 
 

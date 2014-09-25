@@ -25,9 +25,11 @@ int main(void){
 	trap_init();
 	uart_puts("\ntrap_init OK\n");
 
-	/* pic_init(); */
+	pic_init();
 	uart_puts("\npic_init OK\n");
-	
+
+
+	/* initilaconsole*/
 	while(1){}
 	return 0;
 }

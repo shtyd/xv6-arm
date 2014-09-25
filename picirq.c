@@ -40,7 +40,6 @@ void pic_init(void)
 	asm volatile("ldr r3, =0x1000000");
 	asm volatile("orr r2, r3");
 	asm volatile("MCR p15, 0, r2, c1, c0, 0"); //Write Control Register
-
 	
 	vic_base = (unsigned int*)VIC_BASE; 
 
