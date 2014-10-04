@@ -8,6 +8,7 @@ OBJS = \
 	trap.o\
 	trap_asm.o\
 	picirq.o\
+	console.o\
 #	bio.o\
 #	console.o\
 #	exec.o\
@@ -44,20 +45,20 @@ TOOLPREFIX = arm-none-eabi-
 #TOOLPREFIX = 
 
 # Try to infer the correct TOOLPREFIX if not set
-ifndef TOOLPREFIX
-TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/dev/null 2>&1; \
-	then echo 'i386-jos-elf-'; \
-	elif objdump -i 2>&1 | grep 'elf32-i386' >/dev/null 2>&1; \
-	then echo ''; \
-	else echo "***" 1>&2; \
-	echo "*** Error: Couldn't find an i386-*-elf version of GCC/binutils." 1>&2; \
-	echo "*** Is the directory with i386-jos-elf-gcc in your PATH?" 1>&2; \
-	echo "*** If your i386-*-elf toolchain is installed with a command" 1>&2; \
-	echo "*** prefix other than 'i386-jos-elf-', set your TOOLPREFIX" 1>&2; \
-	echo "*** environment variable to that prefix and run 'make' again." 1>&2; \
-	echo "*** To turn off this error, run 'gmake TOOLPREFIX= ...'." 1>&2; \
-	echo "***" 1>&2; exit 1; fi)
-endif
+# ifndef TOOLPREFIX
+# TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/dev/null 2>&1; \
+# 	then echo 'i386-jos-elf-'; \
+# 	elif objdump -i 2>&1 | grep 'elf32-i386' >/dev/null 2>&1; \
+# 	then echo ''; \
+# 	else echo "***" 1>&2; \
+# 	echo "*** Error: Couldn't find an i386-*-elf version of GCC/binutils." 1>&2; \
+# 	echo "*** Is the directory with i386-jos-elf-gcc in your PATH?" 1>&2; \
+# 	echo "*** If your i386-*-elf toolchain is installed with a command" 1>&2; \
+# 	echo "*** prefix other than 'i386-jos-elf-', set your TOOLPREFIX" 1>&2; \
+# 	echo "*** environment variable to that prefix and run 'make' again." 1>&2; \
+# 	echo "*** To turn off this error, run 'gmake TOOLPREFIX= ...'." 1>&2; \
+# 	echo "***" 1>&2; exit 1; fi)
+# endif
 
 # If the makefile can't find QEMU, specify its path here
 QEMU = qemu-system-arm
@@ -86,13 +87,18 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
 #CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -Werror -fno-omit-frame-pointer -mcpu=arm1176jzf-s -g -D"$(TARGET)"
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -fno-omit-frame-pointer -mcpu=arm1176jzf-s -g -D"$(TARGET)"
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 #ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 ASFLAGS = -gdwarf-2 -mcpu=arm1176jzf-s -g -D"$(TARGET)"
 # FreeBSD ld wants ``elf_i386_fbsd''
 #LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 LDFLAGS += -m $(shell $(LD) -V | grep armelf 2>/dev/null)
+
+
+# link the libgcc.a for __aeabi_idiv. ARM has no native support for div
+LIBGCC = $(shell $(CC) -print-libgcc-file-name)
+
 
 #xv6.img: bootblock kernel fs.img
 	# dd if=/dev/zero of=xv6.img count=10000
@@ -130,7 +136,7 @@ LDFLAGS += -m $(shell $(LD) -V | grep armelf 2>/dev/null)
 #kernel: $(OBJS) entry.o entryother initcode kernel.ld
 #	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) -b binary initcode entryother
 kernel: $(OBJS) entry.o kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS)
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS) $(LIBGCC)
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 	$(OBJCOPY) kernel -O binary kernel.img

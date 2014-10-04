@@ -16,10 +16,11 @@ void            brelse(struct buf*);
 void            bwrite(struct buf*);
 
 // console.c
-void            consoleinit(void);
+void            console_init(void);
 void            cprintf(char*, ...);
 void            consoleintr(int(*)(void));
 void            panic(char*) __attribute__((noreturn));
+
 
 // exec.c
 int             exec(char*, char**);

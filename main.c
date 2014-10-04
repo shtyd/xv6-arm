@@ -28,8 +28,14 @@ int main(void){
 	pic_init();
 	uart_puts("\npic_init OK\n");
 
-
 	/* initilaconsole*/
+	console_init();
+	uart_puts("\nconsole_init OK\n");
+
+	char *a = "fuck you\n";
+	uart_putc('A');
+	cprintf("%s\n",a);
+
 	while(1){}
 	return 0;
 }
