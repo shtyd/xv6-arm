@@ -10,6 +10,7 @@ OBJS = \
 	picirq.o\
 	console.o\
 	proc.o\
+	bio.o\
 	file.o\
 	fs.o\
 	ide.o\
