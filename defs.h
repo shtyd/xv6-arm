@@ -29,7 +29,7 @@ int             exec(char*, char**);
 struct file*    filealloc(void);
 void            fileclose(struct file*);
 struct file*    filedup(struct file*);
-void            fileinit(void);
+void            file_init(void);
 int             fileread(struct file*, char*, int n);
 int             filestat(struct file*, struct stat*);
 int             filewrite(struct file*, char*, int n);
@@ -54,7 +54,7 @@ void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, char*, uint, uint);
 
 // ide.c
-void            ideinit(void);
+void            ide_init(void);
 void            ideintr(void);
 void            iderw(struct buf*);
 
@@ -151,7 +151,7 @@ int             fetchstr(uint, char**);
 void            syscall(void);
 
 // timer.c
-void            timerinit(void);
+void            timer_init(void);
 
 // trap.c
 void            idtinit(void);

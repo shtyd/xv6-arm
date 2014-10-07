@@ -9,6 +9,11 @@ OBJS = \
 	trap_asm.o\
 	picirq.o\
 	console.o\
+	proc.o\
+	file.o\
+	fs.o\
+	ide.o\
+	timer.o\
 #	bio.o\
 #	console.o\
 #	exec.o\

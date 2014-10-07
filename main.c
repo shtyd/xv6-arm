@@ -32,9 +32,34 @@ int main(void){
 	console_init();
 	uart_puts("\nconsole_init OK\n");
 
-	char *a = "fuck you\n";
-	uart_putc('A');
-	cprintf("%s\n",a);
+	char *a = "Hello Console\n";
+	//cprintf("%s\n",a);
+
+
+	//process table
+	pinit();
+	uart_puts("pinit OK\n\n");
+
+	//buffer cachae
+	/* binit(); */
+	/* uart_puts("binit OK\n"); */
+
+	//file init
+	file_init();
+	uart_puts("file init OK\n\n");
+
+	//inode cache init
+	i_init();
+	uart_puts("inode init OK\n\n");
+
+	//IDE init
+	ide_init();
+	uart_puts("IDE disk unit Ok \n\n");
+
+	//timer init
+	timer_init();
+	uart_puts("timer init OK\n\n");
+
 
 	while(1){}
 	return 0;
