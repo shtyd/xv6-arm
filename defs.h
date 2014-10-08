@@ -9,6 +9,19 @@ struct stat;
 struct superblock;
 
 
+// arm.c
+void            set_stk(uint mode, uint addr);
+void            cli (void);
+void            sti (void);
+uint            spsr_usr();
+int             int_enabled();
+void            pushcli(void);
+void            popcli(void);
+void            getcallerpcs(void *, uint*);
+void*           get_fp (void);
+void            show_callstk (char *);
+
+
 // bio.c
 void            b_init(void);
 struct buf*     bread(uint, uint);
@@ -40,7 +53,7 @@ int             dirlink(struct inode*, char*, uint);
 struct inode*   dirlookup(struct inode*, char*, uint*);
 struct inode*   ialloc(uint, short);
 struct inode*   idup(struct inode*);
-void            iinit(void);
+void            i_init(void);
 void            ilock(struct inode*);
 void            iput(struct inode*);
 void            iunlock(struct inode*);
@@ -111,7 +124,7 @@ void            exit(void);
 int             fork(void);
 int             growproc(int);
 int             kill(int);
-void            pinit(void);
+void            p_init(void);
 void            procdump(void);
 void            scheduler(void) __attribute__((noreturn));
 void            sched(void);
@@ -128,7 +141,7 @@ void            swtch(struct context**, struct context*);
 void            acquire(struct spinlock*);
 void            getcallerpcs(void*, uint*);
 int             holding(struct spinlock*);
-void            initlock(struct spinlock*, char*);
+void            init_lock(struct spinlock*, char*);
 void            release(struct spinlock*);
 void            pushcli(void);
 void            popcli(void);

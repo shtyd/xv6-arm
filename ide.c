@@ -6,7 +6,6 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
-#include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
 #include "buf.h"
@@ -30,39 +29,39 @@ static int havedisk1;
 static void idestart(struct buf*);
 
 // Wait for IDE disk to become ready.
-/* static int */
-/* idewait(int checkerr) */
-/* { */
-/*   int r; */
-
-/*   while(((r = inb(0x1f7)) & (IDE_BSY|IDE_DRDY)) != IDE_DRDY)  */
-/*     ; */
-/*   if(checkerr && (r & (IDE_DF|IDE_ERR)) != 0) */
-/*     return -1; */
-/*   return 0; */
-/* } */
+static int
+idewait(int checkerr)
+{
+	int r;
+	
+	/* while(((r = inb(0x1f7)) & (IDE_BSY|IDE_DRDY)) != IDE_DRDY) */
+	/* 	; */
+	if(checkerr && (r & (IDE_DF|IDE_ERR)) != 0)
+		return -1;
+	return 0;
+}
 
 void
 ide_init(void)
 {
-  /* int i; */
+	int i;
 
-  /* initlock(&idelock, "ide"); */
-  /* picenable(IRQ_IDE); */
-  /* ioapicenable(IRQ_IDE, ncpu - 1); */
-  /* idewait(0); */
+	init_lock(&idelock, "ide");
+	/* picenable(IRQ_IDE); */
+	/* ioapicenable(IRQ_IDE, ncpu - 1); */
+	/* idewait(0); */
   
-  /* // Check if disk 1 is present */
-  /* outb(0x1f6, 0xe0 | (1<<4)); */
-  /* for(i=0; i<1000; i++){ */
-  /*   if(inb(0x1f7) != 0){ */
-  /*     havedisk1 = 1; */
-  /*     break; */
-  /*   } */
-  /* } */
+	/* // Check if disk 1 is present */
+	/* outb(0x1f6, 0xe0 | (1<<4)); */
+	/* for(i=0; i<1000; i++){ */
+	/* 	if(inb(0x1f7) != 0){ */
+	/* 		havedisk1 = 1; */
+	/* 		break; */
+	/* 	} */
+	/* } */
   
-  /* // Switch back to disk 0. */
-  /* outb(0x1f6, 0xe0 | (0<<4)); */
+	/* // Switch back to disk 0. */
+	/* outb(0x1f6, 0xe0 | (0<<4)); */
 }
 
 /* // Start the request for b.  Caller must hold idelock. */

@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "uart.h"
 
+struct cpu cpus[NCPU];
+struct cpu *cpu;
 
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
@@ -13,6 +15,8 @@ extern char end[]; // first address after kernel loaded from ELF file
 unsigned int test_end;
 
 int main(void){
+
+	cpu = &cpu[0];
 
 	kinit1(end, P2V(4*1024*1024));  /*end(0xc0014040あたり)のページサイズ分の切り上げ ~ */
 	                                /* 0xc0400000 をfreelistにする*/
@@ -28,7 +32,8 @@ int main(void){
 	pic_init();
 	uart_puts("\npic_init OK\n");
 
-	/* initilaconsole*/
+	/* init console*/
+	/*use locking*/
 	console_init();
 	uart_puts("\nconsole_init OK\n");
 
@@ -37,7 +42,7 @@ int main(void){
 
 
 	//process table
-	pinit();
+	p_init();
 	uart_puts("pinit OK\n\n");
 
 	//buffer cachae
@@ -57,8 +62,8 @@ int main(void){
 	uart_puts("IDE disk unit Ok \n\n");
 
 	//timer init
-	timer_init();
-	uart_puts("timer init OK\n\n");
+	/* timer_init(); */
+	/* uart_puts("timer init OK\n\n"); */
 
 
 	//kinit2(P2V(4*1024*1024), P2V(PHYSTOP));

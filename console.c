@@ -17,10 +17,10 @@ static void cons_putc(int);
 
 static int panicked = 0;
 
-/* static struct { */
-/* 	struct spinlock lock; */
-/* 	int locking; */
-/* } cons; */
+static struct {
+	struct spinlock lock;
+	int locking;
+} cons;
 
 /*cprintfのための関数*/
 static void printint (int xx, int base, int sign)
@@ -56,19 +56,19 @@ static void printint (int xx, int base, int sign)
 /* // Print to the console. only understands %d, %x, %p, %s. */
 void cprintf (char *fmt, ...)
 {
-	int i, c;// locking;
+	int i, c, locking;
 	uint *argp;
 	char *s;
 
-//	locking = cons.locking;
+	locking = cons.locking;
 
-	/* if (locking) { */
-	/*     acquire(&cons.lock); */
-	/* } */
+	if (locking) {
+	    acquire(&cons.lock);
+	}
 
-	/* if (fmt == 0) { */
-	/*     panic("null fmt"); */
-	/* } */
+	if (fmt == 0) {
+	    panic("null fmt");
+	}
 
 	argp = (uint*) (void*) (&fmt + 1);
 
@@ -116,24 +116,24 @@ void cprintf (char *fmt, ...)
 		}
 	}
 
-	/* if (locking) { */
-	/*     release(&cons.lock); */
-	/* } */
+	if (locking) {
+	    release(&cons.lock);
+	}
 }
 
-/* void panic (char *s) */
-/* { */
-/* //    cli(); */
-
-/* //	cons.locking = 0; */
+void panic (char *s)
+{
+	cli();
 	
-/* 	cprintf("cpu%d: panic: ", cpu->id); */
+	cons.locking = 0;
 	
-/* 	//show_callstk(s); */
-/* 	//panicked = 1; // freeze other CPU */
+	cprintf("cpu%d: panic: ", cpu->id);
 	
-/* 	while(1){} */
-/* } */
+	show_callstk(s);
+	panicked = 1; // freeze other CPU
+	
+	while(1){}
+}
 
 //PAGEBREAK: 50
 #define BACKSPACE 0x100
@@ -289,8 +289,8 @@ int console_write (struct inode *ip, char *buf, int n)
 
 void console_init (void)
 {
-	/* initlock(&cons.lock, "console"); */
-	/* initlock(&input.lock, "input"); */
+	init_lock(&cons.lock, "console");
+	init_lock(&input.lock, "input");
 
  	/* devsw[CONSOLE].write = console_write; */
 	/* devsw[CONSOLE].read = console_read; */

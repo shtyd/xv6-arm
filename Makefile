@@ -15,6 +15,8 @@ OBJS = \
 	fs.o\
 	ide.o\
 	timer.o\
+	spinlock.o\
+	arm.o\
 #	bio.o\
 #	console.o\
 #	exec.o\

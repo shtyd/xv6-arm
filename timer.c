@@ -1,32 +1,92 @@
-// Intel 8253/8254/82C54 Programmable Interval Timer (PIT).
-// Only used on uniprocessors;
-// SMP machines use the local APIC timer.
+// ARM dual-timer module support (SP804)
+// ARM Timer is based on ARM AP804
 
 #include "types.h"
+#include "param.h"
+#include "mmu.h"
 #include "defs.h"
-#include "traps.h"
-#include "x86.h"
+#include "memlayout.h"
+#include "spinlock.h"
 
-#define IO_TIMER1       0x040           // 8253 Timer #1
+// A SP804 has two timers, we only use the first one, and as perodic timer
 
-// Frequency of all three count-down timers;
-// (TIMER_FREQ/freq) is the appropriate count
-// to generate a frequency of freq Hz.
 
-#define TIMER_FREQ      1193182
-#define TIMER_DIV(x)    ((TIMER_FREQ+(x)/2)/(x))
 
-#define TIMER_MODE      (IO_TIMER1 + 3) // timer mode port
-#define TIMER_SEL0      0x00    // select counter 0
-#define TIMER_RATEGEN   0x04    // mode 2, rate generator
-#define TIMER_16BIT     0x30    // r/w counter 16 bits, LSB first
 
-void
-timer_init(void)
+
+// define registers (in units of 4-bytes)
+#define TIMER_LOAD	   0	// load register, for perodic timer
+#define TIMER_CURVAL   1	// current value of the counter
+#define TIMER_CONTROL  2	// control register
+#define TIMER_INTCLR   3	// clear (ack) the interrupt (any write clear it)
+#define TIMER_MIS      5	// masked interrupt status
+
+// control register bit definitions
+#define TIMER_ONESHOT  0x01	// wrap or one shot
+#define TIMER_32BIT    0x02 // 16-bit/32-bit counter
+#define TIMER_INTEN    0x20	// enable/disable interrupt
+#define TIMER_PERIODIC 0x40	// enable periodic mode
+#define TIMER_EN       0x80	// enable the timer
+
+
+#define TIMER0          0x101E2000
+#define TIMER1          0x101E2020
+#define CLK_HZ          1000000     // the clock is 1MHZ
+
+#define PIC_TIMER01     4
+#define PIC_TIMER23     5
+
+void isr_timer (struct trapframe *tp, int irq_idx);
+
+struct spinlock tickslock;
+uint ticks;
+
+// acknowledge the timer, write any value to TIMER_INTCLR should do
+static void ack_timer ()
 {
-  // Interrupt 100 times/sec.
-  /* outb(TIMER_MODE, TIMER_SEL0 | TIMER_RATEGEN | TIMER_16BIT); */
-  /* outb(IO_TIMER1, TIMER_DIV(100) % 256); */
-  /* outb(IO_TIMER1, TIMER_DIV(100) / 256); */
-  /* picenable(IRQ_TIMER); */
+    volatile uint * timer0 = P2V(TIMER0);
+    timer0[TIMER_INTCLR] = 1;
+}
+
+// initialize the timer: perodical and interrupt based
+void timer_init(void)
+{
+	int hz = 100; //?
+	
+	volatile uint * timer0 = P2V(TIMER0);
+	
+	init_lock(&tickslock, "time");
+	
+	timer0[TIMER_LOAD] = CLK_HZ / hz;
+	timer0[TIMER_CONTROL] = TIMER_EN|TIMER_PERIODIC|TIMER_32BIT|TIMER_INTEN;
+
+//	pic_enable (PIC_TIMER01, isr_timer);
+}
+
+// interrupt service routine for the timer
+void isr_timer (struct trapframe *tp, int irq_idx)
+{
+    /* acquire(&tickslock); */
+    /* ticks++; */
+    /* wakeup(&ticks); */
+    /* release(&tickslock); */
+    /* ack_timer(); */
+}
+
+// a short delay, use timer 1 as the source
+void micro_delay (int us)
+{
+    volatile uint * timer1 = P2V(TIMER1);
+
+    // load the initial value to timer1, and configure it to be freerun
+    timer1[TIMER_CONTROL] = TIMER_EN | TIMER_32BIT;
+    timer1[TIMER_LOAD] = us;
+
+    // the register will wrap to 0xFFFFFFFF after decrement to 0
+    while ((int)timer1[TIMER_CURVAL] > 0) {
+
+    }
+
+    // disable timer
+    timer1[TIMER_CONTROL] = 0;
 }

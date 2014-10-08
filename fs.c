@@ -164,7 +164,7 @@ struct {
 void
 i_init(void)
 {
-//  initlock(&icache.lock, "icache");
+	init_lock(&icache.lock, "icache");
 }
 
 /* static struct inode* iget(uint dev, uint inum); */

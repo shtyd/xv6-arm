@@ -21,9 +21,9 @@ extern void trapret(void);
 static void wakeup1(void *chan);
 
 void
-pinit(void)
+p_init(void)
 {
-//  initlock(&ptable.lock, "ptable");
+	init_lock(&ptable.lock, "ptable");
 }
 
 //PAGEBREAK: 32
