@@ -121,7 +121,7 @@ trap_init(void)
 	/* else */
 	/* 	uart_puts("Translation Test Failed!\n"); */
 
-       
+
 	//Select High Exception Vector Address
 	asm volatile("MRC p15, 0, r2, c1, c0, 0"); //Read Control Register
 	asm volatile("ldr r3, =0x2000");

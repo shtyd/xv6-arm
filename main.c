@@ -62,8 +62,8 @@ int main(void){
 	uart_puts("IDE disk unit Ok \n\n");
 
 	//timer init
-	/* timer_init(); */
-	/* uart_puts("timer init OK\n\n"); */
+	timer_init();
+	uart_puts("timer init OK\n\n");
 
 
 	//kinit2(P2V(4*1024*1024), P2V(PHYSTOP));

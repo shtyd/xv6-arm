@@ -108,7 +108,7 @@ void            mpinit(void);
 void            mpstartthem(void);
 
 // picirq.c
-void            picenable(int);
+void            pic_enable(int, ISR);
 void            pic_init(void);
 
 // pipe.c

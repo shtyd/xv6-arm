@@ -19,8 +19,8 @@ struct run {
 };
 
 struct {
-	// struct spinlock lock;
-	//int use_lock;
+	struct spinlock lock;
+	int use_lock;
 	struct run *freelist;
 } kmem;
 
@@ -36,8 +36,8 @@ void
 kinit1(void *vstart, void *vend)
 {
 	uart_puts("kinit1\n");
-	// initlock(&kmem.lock, "kmem");
-	// kmem.use_lock = 0;
+	init_lock(&kmem.lock, "kmem");
+	kmem.use_lock = 0;
 	freerange(vstart, vend);
 }
 
@@ -46,7 +46,7 @@ kinit2(void *vstart, void *vend)
 {
 	uart_puts("kinit2\n");
 	freerange(vstart, vend);
-	// kmem.use_lock = 1;
+	 kmem.use_lock = 1;
 }
 
 void
@@ -133,6 +133,7 @@ kalloc(void)
 	return (char*)r;
 }
 
+//これは使わない。カーネルページディレクトリは静的に確保することにする。
 /* //16KB境界に整列した16KBの物理メモリを探して取得する。 */
 /* char* */
 /* kalloc_pd(void) */

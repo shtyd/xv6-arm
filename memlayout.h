@@ -23,6 +23,8 @@
 //VIC base address
 #define VIC_BASE 0xfffef000
 
+//ARM Timer base address
+#define TIMER_BASE 0x7e00b000
 
 //Exception Vector Table Address
 #define VEC_TBL 0xffff0000

@@ -168,9 +168,13 @@ static struct kmap {
 	{ (void*)KERNLINK, V2P(KERNLINK), V2P(data), PTE_W},     // kern text+rodata+stab+stabstr
 	{ (void*)data,     V2P(data),     V2P(end),   PTE_W}, // kern data+bss
 	//{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices
+	{ (void*)end,      V2P(end),      4*1024*1024, PTE_W},   //freelist これは...?
 	{ (void*)UART0_BASE_V, UART0_BASE_P, UART0_BASE_P + 0x1000 ,PTE_W},
 	{ (void*)VEC_TBL, 0x6000, 0x7000 , PTE_W},   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
 	{ (void*)VIC_BASE, VIC_BASE, VIC_BASE + 0x1000 , PTE_W},
+	/* { (void*)0xc0024000, V2P(end), V2P(end) + 0x1000, PTE_W}, */
+	/* { (void*)0xc0025000, V2P(end), V2P(end) + 0x1000, PTE_W}, */
+	{ (void*)TIMER_BASE, TIMER_BASE, TIMER_BASE + 0x1000, PTE_W}
 };
 
 
@@ -184,8 +188,9 @@ setupkvm(void)
 	struct kmap *k;
 
 	//VEC_TBLのためのマップ（別のところでやることはできない？）
-	kmap[4].phys_start = v2p(kalloc());
-	kmap[4].phys_end = kmap[4].phys_start + 0x1000;
+	//物理アドレスを指定する必要がないものなのだから、ここで確保する必要はないのでは。
+	kmap[5].phys_start = v2p(kalloc());
+	kmap[5].phys_end = kmap[4].phys_start + 0x1000;
 
 	/*空のpage directoryを取得(16KB alignされている必要アリ)*/
 	pgdir = (pde_t*)kernel_pgdir;
@@ -237,17 +242,18 @@ switchkvm(void)
 	//switch page table
 	asm volatile("MCR p15, 0, %[src], c2, c0, 0" :: [src]"r"(kpgdir_addr));
 
-	// Invalidate TLB
-	asm volatile("ldr r2, =0");
-	asm volatile("MCR p15, 0, r2, c8, c5, 0");  //Invalidate unlocked Inst TLB entries
-	asm volatile("MCR p15, 0, r2, c8, c5, 1");  //Invalidate unlocked Data TLB entries
+	/* // Invalidate TLB */
+	/* asm volatile("ldr r2, =0"); */
+	/* asm volatile("MCR p15, 0, r2, c8, c5, 0");  //Invalidate unlocked Inst TLB entries */
+	/* asm volatile("MCR p15, 0, r2, c8, c5, 1");  //Invalidate unlocked Data TLB entries */
 
-	// invalidate Instruction Cache (p.3-70)
-	asm volatile("ldr r2, =0");
-	asm volatile("MCR p15, 0, r2, c7, c5, 0");  //Invalidate Entire Instruction Cache
-	asm volatile("MCR p15, 0, r2, c7, c6, 0");  //Invalidate Entire Data Cache
-	asm volatile("MCR p15, 0, r2, c7, c5, 4");  //Flush Instruction Buffer
-	asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache
+	/* // invalidate Instruction Cache (p.3-70) */
+	/* asm volatile("ldr r2, =0"); */
+	/* asm volatile("MCR p15, 0, r2, c7, c5, 0");  //Invalidate Entire Instruction Cache */
+	/* asm volatile("MCR p15, 0, r2, c7, c6, 0");  //Invalidate Entire Data Cache */
+	/* asm volatile("MCR p15, 0, r2, c7, c5, 4");  //Flush Instruction Buffer */
+	/* asm volatile("MCR p15, 0, r2, c7, c10, 0"); //Clean Entire Data Cache */
+
 
 	uart_puts("switchkvm done\n");
 }
