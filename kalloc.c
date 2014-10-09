@@ -46,7 +46,7 @@ kinit2(void *vstart, void *vend)
 {
 	uart_puts("kinit2\n");
 	freerange(vstart, vend);
-	 kmem.use_lock = 1;
+	kmem.use_lock = 1;
 }
 
 void
@@ -72,24 +72,22 @@ kfree(char *v)
 	
 	//アドレスvがページ境界に合っているか、endより大きいか、PHYSTOP以下であるか
 	if((uint)v % PGSIZE || v < end || v2p(v) >= PHYSTOP)
-		uart_puts("kfree_panic");
-	//panic("kfree");
-//	uart_puts("C");
-	// Fill with junk to catch dangling refs. ??
-	// freedメモリ空間は１で埋め尽くす.
+		panic("kfree");
+
+	// Fill with junk to catch dangling refs.
 	memset(v, 1, PGSIZE);
 	
-//	uart_puts("D");
-	// if(kmem.use_lock)
-	//  acquire(&kmem.lock);
+
+	if(kmem.use_lock)
+		acquire(&kmem.lock);
+	
 	r = (struct run*)v;
 	r->next = kmem.freelist;      /*r->nextに既存のfreeリストを代入*/
 	kmem.freelist = r;            /*freeリストがこのrを指すようにする。*/
 	                              /*結局、rがfreeリストの先頭に挿入されたということになる*/
 
-//	uart_puts("E");
-	//if(kmem.use_lock)
-	//  release(&kmem.lock);
+	if(kmem.use_lock)
+		release(&kmem.lock);
 }
 
 void
@@ -110,8 +108,9 @@ kalloc(void)
 {
 	struct run *r;
 	
-	// if(kmem.use_lock)
-	//  acquire(&kmem.lock);
+	if(kmem.use_lock)
+		acquire(&kmem.lock);
+
 	r = kmem.freelist;
        	
 //	check_fl();
@@ -123,8 +122,8 @@ kalloc(void)
 	else
 		uart_puts("no elements in free list\n");
 
-	//if(kmem.use_lock)
-	//  release(&kmem.lock);
+	if(kmem.use_lock)
+		release(&kmem.lock);
 	// freeリストの要素がひとつもなければ0を返す。
 	/* kakunin = (char*)kmem.freelist;   //現在２つ目のfreelistの要素が0になっている。 */
 	/* while(1) {} */

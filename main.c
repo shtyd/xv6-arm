@@ -66,7 +66,8 @@ int main(void){
 	uart_puts("timer init OK\n\n");
 
 
-	//kinit2(P2V(4*1024*1024), P2V(PHYSTOP));
+	kinit2(P2V(4*1024*1024), P2V(PHYSTOP));
+	uart_puts("kinit2 OK\n\n");
 
 	// first user process
 	//userinit();

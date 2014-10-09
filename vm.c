@@ -168,7 +168,7 @@ static struct kmap {
 	{ (void*)KERNLINK, V2P(KERNLINK), V2P(data), PTE_W},     // kern text+rodata+stab+stabstr
 	{ (void*)data,     V2P(data),     V2P(end),   PTE_W}, // kern data+bss
 	//{ (void*)DEVSPACE, DEVSPACE,      DEVSPACE + 0x10000 ,PTE_W}, // more devices
-	{ (void*)end,      V2P(end),      4*1024*1024, PTE_W},   //freelist これは...?
+	{ (void*)end,      V2P(end),      PHYSTOP, PTE_W},   //memory(freelist)
 	{ (void*)UART0_BASE_V, UART0_BASE_P, UART0_BASE_P + 0x1000 ,PTE_W},
 	{ (void*)VEC_TBL, 0x6000, 0x7000 , PTE_W},   //Vevtor Tableのマップ。これじゃいけないのだと思う。I/O spaceとかぶってるし あと例外ベクタテーブルは書き込み禁止にしないと。
 	{ (void*)VIC_BASE, VIC_BASE, VIC_BASE + 0x1000 , PTE_W},
